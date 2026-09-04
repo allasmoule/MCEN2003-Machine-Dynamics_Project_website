@@ -1934,3 +1934,61 @@ try{
 }catch(err){
   showErr("STARTUP FAILED: " + ((err && (err.stack||err.message)) || err));
 }
+
+/* ============================================================
+   PORTFOLIO <-> WORKBOOK VIEW SWITCHER
+   ============================================================ */
+(function(){
+  function setView(viewName){
+    const home = document.getElementById("portfolioHome");
+    const wb = document.getElementById("workbookApp");
+    if(!home || !wb) return;
+    if(viewName === "workbook"){
+      home.hidden = true;
+      wb.hidden = false;
+      window.scrollTo({top:0, behavior:"smooth"});
+      if(typeof sizeBoard==="function") setTimeout(sizeBoard, 150);
+    } else {
+      wb.hidden = true;
+      home.hidden = false;
+      window.scrollTo({top:0, behavior:"smooth"});
+    }
+  }
+
+  const btnOpenMCEN = document.getElementById("btnOpenMCEN2003");
+  if(btnOpenMCEN){
+    btnOpenMCEN.addEventListener("click", function(){
+      setView("workbook");
+      try{ history.pushState(null,"","#mcen2003"); }catch(e){}
+    });
+  }
+
+  const btnOpenSubj2 = document.getElementById("btnOpenSubjectTwo");
+  if(btnOpenSubj2){
+    btnOpenSubj2.addEventListener("click", function(){
+      alert("Subject Two (Advanced Dynamics) course materials coming soon!");
+    });
+  }
+
+  const btnBack = document.getElementById("btnBackToHome");
+  if(btnBack){
+    btnBack.addEventListener("click", function(){
+      setView("home");
+      try{ history.pushState(null,"","#home"); }catch(e){}
+    });
+  }
+
+  window.addEventListener("hashchange", function(){
+    if(window.location.hash === "#mcen2003"){
+      setView("workbook");
+    } else {
+      setView("home");
+    }
+  });
+
+  if(window.location.hash === "#mcen2003"){
+    setView("workbook");
+  } else {
+    setView("home");
+  }
+})();
