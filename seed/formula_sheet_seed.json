@@ -1,0 +1,62 @@
+{
+  "heading": "MCEN2003 formula sheet — kinematics extract",
+  "subheading": "Same sheet you get in the exam.",
+  "boxes": [
+    {
+      "title": "Linear motion",
+      "items": [
+        "v = ds/dt &nbsp;&nbsp; a = dv/dt",
+        "&Delta;v = &int; a dt &nbsp;&nbsp; &Delta;s = &int; v dt",
+        "v = u + at &nbsp;<i>constant a</i>",
+        "&Delta;s = ut + &frac12;at&sup2;",
+        "v&sup2; = u&sup2; + 2a&Delta;s"
+      ]
+    },
+    {
+      "title": "Rotational motion",
+      "items": [
+        "&omega; = d&theta;/dt &nbsp;&nbsp; &alpha; = d&omega;/dt",
+        "&omega; = &omega;&#8320; + &alpha;t",
+        "&theta; = &omega;&#8320;t + &frac12;&alpha;t&sup2;",
+        "&omega;&sup2; = &omega;&#8320;&sup2; + 2&alpha;&theta;",
+        "1 rpm = 2&pi;/60 rad/s"
+      ]
+    },
+    {
+      "title": "Circular motion",
+      "items": [
+        "v = r&omega;",
+        "a<sub>t</sub> = r&alpha;",
+        "a<sub>n</sub> = v&sup2;/r = r&omega;&sup2;",
+        "s = r&theta; &nbsp;<i>arc length</i>"
+      ]
+    },
+    {
+      "title": "Relative &amp; polar",
+      "items": [
+        "s<sub>A</sub> = s<sub>B</sub> + s<sub>A/B</sub>",
+        "v<sub>r</sub> = ṙ &nbsp;&nbsp; v<sub>&theta;</sub> = rθ̇",
+        "a<sub>r</sub> = r̈ &minus; rθ̇&sup2;",
+        "a<sub>&theta;</sub> = rθ̈ + 2ṙθ̇"
+      ]
+    },
+    {
+      "title": "Maths you'll need",
+      "items": [
+        "ax&sup2; + bx + c = 0",
+        "x = (&minus;b &plusmn; &radic;(b&sup2;&minus;4ac)) / 2a",
+        "c&sup2; = a&sup2; + b&sup2; &minus; 2ab&middot;cos C",
+        "a / b = sin A / sin B"
+      ]
+    },
+    {
+      "title": "Constants &amp; conversions",
+      "items": [
+        "g = 9.81 m/s&sup2;",
+        "km/h &rarr; m/s: &divide; 3.6",
+        "rpm &rarr; rad/s: &times; 2&pi;/60",
+        "rad &rarr; rev: &divide; 2&pi;"
+      ]
+    }
+  ]
+}

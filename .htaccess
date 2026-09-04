@@ -1,6 +1,17 @@
 # Security & Directory Listing
 Options -Indexes
 
+# Block direct access to config/schema files
+<FilesMatch "^(config\.sample\.php|schema\.sql)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
 # Default Page
 DirectoryIndex index.html
 

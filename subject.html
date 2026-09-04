@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Subject | Prof. Md. Roju Ahomed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="workbook.css">
+
+<style>
+html { color-scheme: light; }
+body { margin: 0; background-color: #F8FAFC; color: #1E293B; font-family: "Plus Jakarta Sans", "IBM Plex Sans", sans-serif; }
+img { max-width: 100%; }
+.subj-hero { padding: 40px 0 8px; }
+.subj-hero .p-tag { color: #64748B; }
+.tut-card-desc { min-height: 0; }
+</style>
+</head>
+<body>
+
+<header class="p-header">
+  <div class="p-header-in">
+    <a href="index.html" class="p-brand">Prof. Md. Roju Ahomed</a>
+    <nav class="p-nav">
+      <a href="index.html" class="p-nav-link">Home</a>
+    </nav>
+  </div>
+</header>
+
+<main class="p-main">
+  <section class="p-section subj-hero" id="subjHero">
+    <span class="p-tag">Loading&hellip;</span>
+    <h1 class="p-name" id="subjName" style="font-size:34px"></h1>
+    <p class="p-desc" id="subjDesc"></p>
+  </section>
+
+  <section class="p-section">
+    <div class="p-sec-head">
+      <h2>Tutorials</h2>
+      <div class="p-underline"></div>
+    </div>
+    <div class="p-subj-grid" id="tutGrid">
+      <div class="p-subj-card" style="color:#94A3B8;font-size:14px">Loading tutorials&hellip;</div>
+    </div>
+  </section>
+</main>
+
+<footer class="p-footer" id="contact">
+  <div class="p-footer-in">
+    <p class="p-copy">&copy; 2025 Md. Roju Ahomed. All Rights Reserved.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  var slug = new URLSearchParams(location.search).get('slug');
+  if (!slug) { location.replace('index.html'); return; }
+
+  fetch('api/tutorials.php?subject=' + encodeURIComponent(slug)).then(function (r) {
+    if (!r.ok) throw new Error('not found');
+    return r.json();
+  }).then(function (data) {
+    var subject = data.subject, tutorials = data.tutorials || [];
+    document.title = subject.name + ' | Prof. Md. Roju Ahomed';
+    document.querySelector('#subjHero .p-tag').textContent = subject.institution || 'Subject';
+    document.getElementById('subjName').textContent = subject.name;
+    document.getElementById('subjDesc').textContent = subject.description || '';
+
+    var grid = document.getElementById('tutGrid');
+    if (!tutorials.length) {
+      grid.innerHTML = '<div class="p-subj-card" style="color:#94A3B8;font-size:14px">No tutorials yet — check back soon.</div>';
+      return;
+    }
+    grid.innerHTML = tutorials.map(function (t) {
+      var next = 'tutorial1.html?tutorial=' + t.id;
+      var desc = t.description ? esc(t.description) : (t.question_count + ' question' + (t.question_count === 1 ? '' : 's') + (t.video_count ? ' &middot; ' + t.video_count + ' video' + (t.video_count === 1 ? '' : 's') : ''));
+      return '<a href="login.html?next=' + encodeURIComponent(next) + '" class="p-subj-card p-clickable">' +
+        '<div class="p-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg></div>' +
+        '<div class="p-card-body"><h3>' + esc(t.title) + '</h3><p class="p-card-desc">' + desc + '</p></div>' +
+        '<div class="p-card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>' +
+        '</a>';
+    }).join('');
+  }).catch(function () {
+    document.getElementById('tutGrid').innerHTML = '<div class="p-subj-card" style="color:#94A3B8;font-size:14px">Subject not found.</div>';
+  });
+})();
+</script>
+
+</body>
+</html>

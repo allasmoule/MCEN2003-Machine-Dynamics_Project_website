@@ -1,0 +1,97 @@
+html{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:#F8FAFC;color:#1E293B;font-family:"IBM Plex Sans","Segoe UI",sans-serif;font-size:14px}
+a{color:inherit}
+
+.admin-shell{display:flex;min-height:100vh}
+
+.admin-sidebar{
+  width:230px;flex-shrink:0;background:#FFFFFF;border-right:1px solid #E2E8F0;
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+}
+.admin-brand{padding:20px 20px 16px;border-bottom:1px solid #E2E8F0}
+.admin-brand-mark{display:block;font-weight:800;font-size:17px;color:#0F172A;letter-spacing:-0.01em}
+.admin-brand-sub{display:block;font-size:12px;color:#94A3B8;margin-top:2px}
+
+.admin-nav{flex:1;padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+.admin-nav a{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;
+  color:#475569;text-decoration:none;font-size:13.5px;font-weight:500;
+}
+.admin-nav a svg{width:17px;height:17px;flex-shrink:0}
+.admin-nav a:hover{background:#F1F5F9;color:#102A56}
+.admin-nav a.active{background:#EEF2FF;color:#102A56;font-weight:700}
+
+.admin-logout{
+  display:flex;align-items:center;gap:10px;margin:10px;padding:10px 12px;border-radius:8px;
+  color:#AF3728;text-decoration:none;font-size:13.5px;font-weight:600;
+}
+.admin-logout svg{width:17px;height:17px}
+.admin-logout:hover{background:#FDECEA}
+
+.admin-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.admin-topbar{background:#FFFFFF;border-bottom:1px solid #E2E8F0;padding:18px 28px}
+.admin-topbar h1{font-size:19px;margin:0;color:#0F172A;letter-spacing:-0.01em}
+.admin-back{display:inline-block;font-size:12.5px;color:#5B7FA6;text-decoration:none;margin-bottom:4px}
+.admin-back:hover{color:#102A56}
+.admin-content{padding:26px 28px 60px;max-width:1100px}
+
+.card{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:20px 22px;margin-bottom:18px;box-shadow:0 1px 2px rgba(15,23,42,.02)}
+.card h2{font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;margin:0 0 14px 0;font-weight:700}
+
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+.meta{color:#64748B;font-size:13px}
+
+.btn{
+  display:inline-flex;align-items:center;gap:7px;border:none;border-radius:8px;
+  padding:9px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;
+}
+.btn-primary{background:#102A56;color:#FFFFFF}
+.btn-primary:hover{background:#0D2246}
+.btn-outline{background:#FFFFFF;border:1.5px solid #CBD5E1;color:#334155}
+.btn-outline:hover{border-color:#102A56;color:#102A56}
+.btn-danger{background:none;border:1.5px solid #F3B7AC;color:#AF3728}
+.btn-danger:hover{background:#FDECEA}
+.btn-sm{padding:6px 12px;font-size:12px}
+
+table{width:100%;border-collapse:collapse;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid #EEF1F5;font-size:13.5px}
+th{color:#94A3B8;font-weight:700;text-transform:uppercase;font-size:10.5px;letter-spacing:.06em;background:#F8FAFC}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#FAFBFD}
+.code-chip{font-family:"IBM Plex Mono",monospace;color:#102A56;background:#EEF2FF;padding:2px 8px;border-radius:5px;font-size:12px}
+.row-actions{display:flex;gap:14px;align-items:center;justify-content:flex-end}
+.row-actions a{color:#5B7FA6;text-decoration:none;font-size:12.5px}
+.row-actions a:hover{color:#102A56}
+.row-actions form{display:inline}
+.row-actions button{background:none;border:none;color:#AF3728;font:inherit;font-size:12.5px;cursor:pointer;padding:0}
+.row-actions button:hover{text-decoration:underline}
+
+.empty{padding:44px 20px;text-align:center;color:#94A3B8;font-size:13.5px}
+
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-size:12.5px;font-weight:600;color:#334155}
+.field .hint{font-size:11.5px;color:#94A3B8;font-weight:400}
+input[type=text],input[type=number],input[type=url],input[type=password],input[type=email],select,textarea{
+  width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #E2E8F0;background:#FFFFFF;color:#0F172A;font:inherit;
+}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#102A56}
+textarea{resize:vertical;font-family:"IBM Plex Mono",monospace;font-size:12.5px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+.rep-row{display:flex;gap:8px;margin-bottom:8px;align-items:flex-start}
+.rep-row input,.rep-row textarea{flex:1}
+.rm-btn{flex:none;background:none;border:1.5px solid #F3B7AC;color:#AF3728;border-radius:6px;padding:8px 10px;cursor:pointer;font-size:12px;font:inherit;margin-top:8px}
+.add-btn{background:none;border:1.5px dashed #CBD5E1;color:#64748B;border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit;font-size:12.5px}
+.add-btn:hover{border-color:#102A56;color:#102A56}
+
+.save-bar{position:sticky;bottom:0;background:#FFFFFF;border-top:1px solid #E2E8F0;padding:14px 28px;display:flex;gap:10px;justify-content:flex-end;margin:0 -28px}
+.err{background:#FDECEA;color:#AF3728;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:16px}
+.ok-msg{background:#E4F5EB;color:#1E7A4C;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:16px}
+
+.subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.subj-tile{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:18px 20px;text-decoration:none;color:inherit;display:block;transition:box-shadow .15s ease,transform .15s ease}
+.subj-tile:hover{box-shadow:0 10px 24px -12px rgba(16,42,86,.18);transform:translateY(-2px);border-color:#C7D5E8}
+.subj-tile h3{font-size:15px;margin:0 0 4px 0;color:#0F172A}
+.subj-tile .subj-inst{font-size:12.5px;color:#102A56;font-weight:600;margin-bottom:8px}
+.subj-tile .subj-count{font-size:12px;color:#94A3B8}

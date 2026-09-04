@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Login — MCEN2003 Machine Dynamics | Prof. Md. Roju Ahomed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="workbook.css">
+
+<style>
+html { color-scheme: light; }
+body { margin: 0; background-color: #F8FAFC; color: #1E293B; font-family: "Plus Jakarta Sans", "IBM Plex Sans", sans-serif; }
+img { max-width: 100%; }
+
+.auth-wrap {
+  max-width: 440px;
+  margin: 56px auto 80px;
+  padding: 0 20px;
+}
+.auth-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+}
+.auth-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+.auth-sub {
+  font-size: 14px;
+  color: #64748B;
+  margin: 0 0 24px 0;
+}
+.auth-tabs {
+  display: flex;
+  gap: 6px;
+  background: #F1F5F9;
+  padding: 4px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+.auth-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 9px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748B;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.auth-tab.active {
+  background: #102A56;
+  color: #FFFFFF;
+}
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+.auth-form[hidden] { display: none; }
+.auth-field { display: flex; flex-direction: column; gap: 6px; }
+.auth-field label { font-size: 13px; font-weight: 600; color: #334155; }
+.auth-field input {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 8px;
+  color: #0F172A;
+  background: #FFFFFF;
+}
+.auth-field input:focus { outline: none; border-color: #102A56; }
+.auth-submit {
+  margin-top: 4px;
+  border: none;
+  background: #102A56;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16,42,86,0.2);
+}
+.auth-submit:hover { background: #0D2246; }
+.auth-submit:disabled { opacity: .6; cursor: default; }
+.auth-msg {
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  display: none;
+}
+.auth-msg.show { display: block; }
+.auth-msg.error { background: #F9E5E1; color: #AF3728; }
+.auth-msg.ok { background: #E0F0E6; color: #2B7A51; }
+.auth-back {
+  display: inline-block;
+  margin-top: 18px;
+  font-size: 13px;
+  color: #64748B;
+  text-decoration: none;
+}
+.auth-back:hover { color: #102A56; }
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 14px 0;
+  color: #94A3B8;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.auth-divider::before, .auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #E2E8F0;
+}
+.auth-demo-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1.5px dashed #B9D8E2;
+  background: #E0EEF3;
+  color: #0F5F7D;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.auth-demo-btn svg { width: 16px; height: 16px; }
+.auth-demo-btn:hover { background: #D3E7EE; border-color: #8FC0D1; }
+.auth-demo-btn:disabled { opacity: .6; cursor: default; }
+.auth-demo-hint {
+  font-size: 12px;
+  color: #94A3B8;
+  text-align: center;
+  margin: 10px 0 0 0;
+}
+</style>
+</head>
+<body>
+
+<header class="p-header">
+  <div class="p-header-in">
+    <a href="index.html" class="p-brand">Prof. Md. Roju Ahomed</a>
+    <nav class="p-nav">
+      <a href="index.html" class="p-nav-link">Home</a>
+    </nav>
+  </div>
+</header>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1 class="auth-title">MCEN2003 Machine Dynamics</h1>
+    <p class="auth-sub">Log in or create an account to open the Tutorial 1 workbook.</p>
+
+    <div class="auth-tabs">
+      <button type="button" class="auth-tab active" id="tabLogin">Login</button>
+      <button type="button" class="auth-tab" id="tabSignup">Sign Up</button>
+    </div>
+
+    <div class="auth-msg" id="authMsg"></div>
+
+    <form class="auth-form" id="loginForm">
+      <div class="auth-field">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" autocomplete="email" required>
+      </div>
+      <div class="auth-field">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="auth-submit" id="loginSubmit">Login</button>
+    </form>
+
+    <div class="auth-divider" id="demoDivider"><span>or</span></div>
+    <button type="button" class="auth-demo-btn" id="demoLoginBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg>
+      Try Demo Login
+    </button>
+    <p class="auth-demo-hint" id="demoHint">No signup needed — explore the workbook instantly as a demo student.</p>
+
+    <form class="auth-form" id="signupForm" hidden>
+      <div class="auth-field">
+        <label for="suName">Full name</label>
+        <input type="text" id="suName" autocomplete="name" required>
+      </div>
+      <div class="auth-field">
+        <label for="suEmail">Email</label>
+        <input type="email" id="suEmail" autocomplete="email" required>
+      </div>
+      <div class="auth-field">
+        <label for="suPhone">Phone number</label>
+        <input type="tel" id="suPhone" autocomplete="tel" required>
+      </div>
+      <div class="auth-field">
+        <label for="suBatch">Batch</label>
+        <input type="text" id="suBatch" placeholder="e.g. 2023" required>
+      </div>
+      <div class="auth-field">
+        <label for="suPassword">Password</label>
+        <input type="password" id="suPassword" autocomplete="new-password" minlength="6" required>
+      </div>
+      <button type="submit" class="auth-submit" id="signupSubmit">Create account</button>
+    </form>
+
+    <a href="index.html" class="auth-back">&larr; Back to homepage</a>
+  </div>
+</div>
+
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var next = params.get('next') || 'tutorial1.html';
+
+  var tabLogin = document.getElementById('tabLogin');
+  var tabSignup = document.getElementById('tabSignup');
+  var loginForm = document.getElementById('loginForm');
+  var signupForm = document.getElementById('signupForm');
+  var msg = document.getElementById('authMsg');
+  var demoDivider = document.getElementById('demoDivider');
+  var demoLoginBtn = document.getElementById('demoLoginBtn');
+  var demoHint = document.getElementById('demoHint');
+
+  function showTab(which) {
+    var isLogin = which === 'login';
+    tabLogin.classList.toggle('active', isLogin);
+    tabSignup.classList.toggle('active', !isLogin);
+    loginForm.hidden = !isLogin;
+    signupForm.hidden = isLogin;
+    demoDivider.hidden = !isLogin;
+    demoLoginBtn.hidden = !isLogin;
+    demoHint.hidden = !isLogin;
+    hideMsg();
+  }
+  tabLogin.addEventListener('click', function () { showTab('login'); });
+  tabSignup.addEventListener('click', function () { showTab('signup'); });
+
+  function hideMsg() {
+    msg.className = 'auth-msg';
+    msg.textContent = '';
+  }
+  function showMsg(text, kind) {
+    msg.textContent = text;
+    msg.className = 'auth-msg show ' + kind;
+  }
+
+  function postJSON(url, data) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(function (res) {
+      return res.json().then(function (body) {
+        if (!res.ok) throw new Error(body.error || 'Something went wrong.');
+        return body;
+      });
+    });
+  }
+
+  // If already logged in, skip straight to the workbook.
+  fetch('api/me.php').then(function (r) { return r.json(); }).then(function (data) {
+    if (data.user) location.replace(next);
+  }).catch(function () {});
+
+  loginForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    hideMsg();
+    var btn = document.getElementById('loginSubmit');
+    btn.disabled = true;
+    postJSON('api/login.php', {
+      email: document.getElementById('loginEmail').value.trim(),
+      password: document.getElementById('loginPassword').value
+    }).then(function (body) {
+      if (body.admin) {
+        showMsg('Logged in as admin — redirecting…', 'ok');
+        location.replace('admin/questions.php');
+        return;
+      }
+      showMsg('Logged in — redirecting…', 'ok');
+      location.replace(next);
+    }).catch(function (err) {
+      showMsg(err.message, 'error');
+      btn.disabled = false;
+    });
+  });
+
+  demoLoginBtn.addEventListener('click', function () {
+    hideMsg();
+    demoLoginBtn.disabled = true;
+    postJSON('api/demo_login.php', {}).then(function () {
+      showMsg('Logged in as demo student — redirecting…', 'ok');
+      location.replace(next);
+    }).catch(function (err) {
+      showMsg(err.message, 'error');
+      demoLoginBtn.disabled = false;
+    });
+  });
+
+  signupForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    hideMsg();
+    var btn = document.getElementById('signupSubmit');
+    btn.disabled = true;
+    postJSON('api/signup.php', {
+      name: document.getElementById('suName').value.trim(),
+      email: document.getElementById('suEmail').value.trim(),
+      phone: document.getElementById('suPhone').value.trim(),
+      batch: document.getElementById('suBatch').value.trim(),
+      password: document.getElementById('suPassword').value
+    }).then(function () {
+      showMsg('Account created — redirecting…', 'ok');
+      location.replace(next);
+    }).catch(function (err) {
+      showMsg(err.message, 'error');
+      btn.disabled = false;
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

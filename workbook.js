@@ -29,7 +29,7 @@ const IMG_FIG4 = `<img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2
 /* ============================================================
    TUTORIAL 1 CONTENT
    ============================================================ */
-const QUESTIONS = [
+const QUESTIONS_FALLBACK = [
 {
   id:"t11", code:"T1.1", topic:"Two-phase straight-line motion",
   title:"Tracked object: velocity, displacement and maximum reach",
@@ -406,6 +406,7 @@ Velocity of ball 2 at launch:
         v₂ = 42.36 ms⁻¹`
 }
 ];
+let QUESTIONS = QUESTIONS_FALLBACK;
 
 /* ============================================================
    DIAGNOSTIC WRONG ANSWERS
@@ -757,7 +758,6 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;","
    RAIL
    ============================================================ */
 const railList=document.getElementById("railList");
-document.getElementById("railCount").textContent=QUESTIONS.length+" questions";
 
 function qState(q){
   const s=qs(q);
@@ -767,6 +767,7 @@ function qState(q){
   return "partial";
 }
 function buildRail(){
+  document.getElementById("railCount").textContent=QUESTIONS.length+" questions";
   railList.innerHTML="";
   QUESTIONS.forEach((q,i)=>{
     const li=document.createElement("li");
@@ -1315,6 +1316,13 @@ fsToggle.addEventListener("click",()=>{
   fsPanel.hidden=!open;
   fsToggle.setAttribute("aria-pressed",open?"true":"false");
   fsToggle.classList.toggle("active",open);
+});
+const videosPanel=document.getElementById("videosPanel"), videosToggle=document.getElementById("videosToggle");
+videosToggle.addEventListener("click",()=>{
+  const open=videosPanel.hidden;
+  videosPanel.hidden=!open;
+  videosToggle.setAttribute("aria-pressed",open?"true":"false");
+  videosToggle.classList.toggle("active",open);
 });
 
 /* ============================================================
@@ -1928,9 +1936,92 @@ document.getElementById("resetAll").addEventListener("click",e=>{
   });
 })();
 
-try{
-  render();
-  calcLive();
-}catch(err){
-  showErr("STARTUP FAILED: " + ((err && (err.stack||err.message)) || err));
+function renderFormulaSheet(sheet){
+  if(!sheet) return;
+  const top=document.querySelector("#fsPanel .fsheet-top");
+  if(top){
+    const spans=top.querySelectorAll("span.label");
+    if(spans[0] && sheet.heading) spans[0].textContent=sheet.heading;
+    if(spans[1] && sheet.subheading) spans[1].textContent=sheet.subheading;
+  }
+  const grid=document.querySelector("#fsPanel .fgrid");
+  if(grid && Array.isArray(sheet.boxes) && sheet.boxes.length){
+    grid.innerHTML=sheet.boxes.map(b=>
+      '<div class="fbox"><h4>'+(b.title||"")+'</h4><ul>'+
+      (b.items||[]).map(it=>'<li>'+it+'</li>').join("")+
+      '</ul></div>'
+    ).join("");
+  }
 }
+
+function embedHtml(url){
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{6,})/);
+  if(yt) return '<div class="video-embed"><iframe src="https://www.youtube.com/embed/'+yt[1]+'" title="video" frameborder="0" allowfullscreen loading="lazy"></iframe></div>';
+  const vm = url.match(/vimeo\.com\/(\d+)/);
+  if(vm) return '<div class="video-embed"><iframe src="https://player.vimeo.com/video/'+vm[1]+'" title="video" frameborder="0" allowfullscreen loading="lazy"></iframe></div>';
+  return '<div class="video-embed"><video controls src="'+esc(url)+'"></video></div>';
+}
+function renderVideos(videos){
+  if(!Array.isArray(videos) || !videos.length) return;
+  videosPanel.innerHTML =
+    '<div class="fsheet-top"><span class="label">Videos</span></div>' +
+    '<div class="video-list">' +
+    videos.map(v=>
+      '<div class="video-item">' + embedHtml(v.url) +
+      '<div class="video-item-title">'+esc(v.title)+'</div>' +
+      (v.description ? '<div class="video-item-desc">'+esc(v.description)+'</div>' : '') +
+      '</div>'
+    ).join("") +
+    '</div>';
+  videosToggle.hidden=false;
+}
+
+(async function bootstrap(){
+  const tutorialId = new URLSearchParams(location.search).get("tutorial") || "";
+  const qUrl = "api/questions.php" + (tutorialId ? "?tutorial="+encodeURIComponent(tutorialId) : "");
+  let resolvedTutorialId = tutorialId;
+  try{
+    const res = await fetch(qUrl);
+    if(res.ok){
+      const data = await res.json();
+      if(Array.isArray(data.questions) && data.questions.length){
+        QUESTIONS = data.questions;
+      }
+      if(data.tutorial){
+        resolvedTutorialId = String(data.tutorial.id);
+        const subjEl=document.getElementById("tutSubject"), titleEl=document.getElementById("tutTitle");
+        if(subjEl && data.tutorial.subject_name) subjEl.textContent=data.tutorial.subject_name;
+        if(titleEl && data.tutorial.title) titleEl.textContent=data.tutorial.title;
+        document.title = data.tutorial.title + " — " + data.tutorial.subject_name + " | Prof. Md. Roju Ahomed";
+      }
+    }
+  }catch(e){
+    /* offline / API unreachable — silently fall back to QUESTIONS_FALLBACK */
+  }
+  try{
+    const fsRes = await fetch("api/formula_sheet.php");
+    if(fsRes.ok){
+      const fsData = await fsRes.json();
+      renderFormulaSheet(fsData.formula_sheet);
+    }
+  }catch(e){
+    /* offline / API unreachable — keep the static formula sheet markup */
+  }
+  try{
+    const vUrl = "api/videos.php" + (resolvedTutorialId ? "?tutorial="+encodeURIComponent(resolvedTutorialId) : "");
+    const vRes = await fetch(vUrl);
+    if(vRes.ok){
+      const vData = await vRes.json();
+      renderVideos(vData.videos);
+    }
+  }catch(e){
+    /* offline / API unreachable — no videos panel */
+  }
+  if(active>=QUESTIONS.length || active<0) active=0;
+  try{
+    render();
+    calcLive();
+  }catch(err){
+    showErr("STARTUP FAILED: " + ((err && (err.stack||err.message)) || err));
+  }
+})();
