@@ -11,6 +11,7 @@
   --radius:4px;
   color-scheme:light;
 }
+[hidden], #workbookApp[hidden], #portfolioHome[hidden] { display: none !important; }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --paper:#161A1F; --ground:#0B1014; --sunk:#1B2027;
