@@ -1236,6 +1236,7 @@ document.querySelectorAll(".swatch").forEach(btn=>{
     btn.setAttribute("aria-pressed","true");
     penColor=btn.dataset.color; erasing=false;
     document.getElementById("eraser").setAttribute("aria-pressed","false");
+    board.style.cursor = "crosshair";
   });
 });
 document.getElementById("penSize").addEventListener("click",e=>{
@@ -1246,6 +1247,7 @@ document.getElementById("penSize").addEventListener("click",e=>{
 });
 document.getElementById("eraser").addEventListener("click",e=>{
   erasing=!erasing; e.target.setAttribute("aria-pressed",erasing?"true":"false");
+  board.style.cursor = erasing ? "cell" : "crosshair";
 });
 document.getElementById("undoStroke").addEventListener("click",()=>{ curPage().s.pop(); save(); redraw(); });
 document.getElementById("clearBoard").addEventListener("click",()=>{ curPage().s=[]; save(); redraw(); });

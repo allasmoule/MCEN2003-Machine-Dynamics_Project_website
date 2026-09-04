@@ -1,4 +1,4 @@
-# Options
+# Security & Directory Listing
 Options -Indexes
 
 # Default Page
@@ -7,12 +7,26 @@ DirectoryIndex index.html
 # UTF-8 Encoding
 AddDefaultCharset UTF-8
 
-# Compression (Gzip)
-<IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json
+# Force HTTPS (Auto-redirect HTTP to HTTPS on cPanel)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} off
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 </IfModule>
 
-# Caching Headers
+# Security Headers
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Compression (Gzip for fast page loads)
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+# Caching Headers for maximum speed
 <IfModule mod_expires.c>
   ExpiresActive On
   ExpiresByType text/html "access plus 1 hour"
