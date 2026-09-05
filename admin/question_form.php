@@ -117,6 +117,11 @@ if (!$steps) $steps = [['t' => '', 'd' => '']];
 
 admin_page_start($q ? 'Edit ' . $q['code'] : 'New Question', 'subjects', 'questions.php?tutorial_id=' . $tutorialId, 'Back to ' . $tutorial['title']);
 ?>
+<?php if (isset($_GET['created_tutorial'])): ?>
+  <div class="ok-msg" style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; padding:12px 16px; border-radius:8px; margin-bottom:18px; font-weight:600;">
+    🎉 Tutorial created successfully! Now add your first question for <strong><?= h($tutorial['title']) ?></strong> below.
+  </div>
+<?php endif; ?>
 <form method="post" enctype="multipart/form-data" id="qForm">
   <?php if ($error): ?><div class="err"><?= h($error) ?></div><?php endif; ?>
 

@@ -53,6 +53,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $maxOrder = (int)$pdo->query('SELECT COALESCE(MAX(sort_order),0) FROM tutorials WHERE subject_id = ' . (int)$subjectId)->fetchColumn();
             $stmt = $pdo->prepare('INSERT INTO tutorials (subject_id, slug, title, description, sort_order) VALUES (?,?,?,?,?)');
             $stmt->execute([$subjectId, $slug, $title, $description ?: null, $maxOrder + 10]);
+            $newTutId = (int)$pdo->lastInsertId();
+            header('Location: question_form.php?tutorial_id=' . $newTutId . '&created_tutorial=1');
+            exit;
         }
         header('Location: tutorials.php?subject_id=' . $subjectId);
         exit;

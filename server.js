@@ -942,6 +942,8 @@ app.get('/admin/tutorials.php', (req, res) => {
       <td style="padding:12px;">${t.question_count}</td>
       <td style="padding:12px;">${t.video_count}</td>
       <td class="row-actions" style="padding:12px; text-align:right;">
+        <a href="/admin/question_form.php?tutorial_id=${t.id}" style="margin-right:10px; background:#102A56; color:#fff; padding:4px 8px; border-radius:4px; text-decoration:none; font-weight:600; font-size:12px;">+ Add Question</a>
+        <a href="/admin/questions.php?tutorial_id=${t.id}" style="margin-right:10px; color:#102A56; text-decoration:none; font-weight:600;">Questions (${t.question_count})</a>
         <a href="/admin/tutorial_form.php?subject_id=${subjectId}&id=${t.id}" style="margin-right:10px; color:#475569; text-decoration:none;">Edit</a>
         <form method="post" action="/admin/tutorial_delete.php" style="display:inline;" onsubmit="return confirm('Delete ${t.title}?');">
           <input type="hidden" name="id" value="${t.id}">
@@ -1032,6 +1034,7 @@ app.post('/admin/tutorial_form.php', (req, res) => {
 
   if (id) {
     db.prepare('UPDATE tutorials SET title = ?, description = ? WHERE id = ? AND subject_id = ?').run(title, description || null, id, subjectId);
+    res.redirect(`/admin/tutorials.php?subject_id=${subjectId}`);
   } else {
     let slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tutorial';
     let check = db.prepare('SELECT id FROM tutorials WHERE subject_id = ? AND slug = ?').get(subjectId, slug);
@@ -1044,10 +1047,10 @@ app.post('/admin/tutorial_form.php', (req, res) => {
     }
     const maxOrderRow = db.prepare('SELECT COALESCE(MAX(sort_order), 0) as m FROM tutorials WHERE subject_id = ?').get(subjectId);
     const maxOrder = maxOrderRow ? maxOrderRow.m : 0;
-    db.prepare('INSERT INTO tutorials (subject_id, slug, title, description, sort_order) VALUES (?, ?, ?, ?, ?)').run(subjectId, slug, title, description || null, maxOrder + 10);
+    const info = db.prepare('INSERT INTO tutorials (subject_id, slug, title, description, sort_order) VALUES (?, ?, ?, ?, ?)').run(subjectId, slug, title, description || null, maxOrder + 10);
+    const newTutId = info.lastInsertRowid;
+    res.redirect(`/admin/question_form.php?tutorial_id=${newTutId}&created_tutorial=1`);
   }
-
-  res.redirect(`/admin/tutorials.php?subject_id=${subjectId}`);
 });
 
 app.post('/admin/tutorial_delete.php', (req, res) => {
@@ -1062,6 +1065,345 @@ app.post('/admin/tutorial_delete.php', (req, res) => {
   }
 
   res.redirect(`/admin/tutorials.php?subject_id=${subjectId}`);
+});
+
+// 6. Questions Management
+app.get('/admin/questions.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const tutorial = db.prepare('SELECT t.*, s.name AS subject_name FROM tutorials t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?').get(tutorialId);
+  if (!tutorial) return res.redirect('/admin/subjects.php');
+
+  const questions = db.prepare('SELECT id, code, topic, title, sort_order FROM questions WHERE tutorial_id = ? ORDER BY sort_order ASC, id ASC').all(tutorialId);
+
+  let tableRows = questions.map(q => `
+    <tr style="border-bottom:1px solid #E2E8F0;">
+      <td style="padding:12px;"><span style="background:#EEF2FF; color:#4F46E5; padding:3px 8px; border-radius:4px; font-weight:700; font-family:monospace;">${q.code}</span></td>
+      <td style="padding:12px; color:#475569;">${q.topic}</td>
+      <td style="padding:12px;"><strong>${q.title}</strong></td>
+      <td class="row-actions" style="padding:12px; text-align:right;">
+        <a href="/admin/question_form.php?tutorial_id=${tutorialId}&id=${q.id}" style="margin-right:10px; color:#475569; text-decoration:none;">Edit</a>
+        <form method="post" action="/admin/question_delete.php" style="display:inline;" onsubmit="return confirm('Delete question ${q.code}?');">
+          <input type="hidden" name="id" value="${q.id}">
+          <input type="hidden" name="tutorial_id" value="${tutorialId}">
+          <button type="submit" style="color:#DC2626; background:transparent; border:none; cursor:pointer; font-size:13px;">Delete</button>
+        </form>
+      </td>
+    </tr>
+  `).join('');
+
+  const bodyHtml = `
+    <div style="margin-bottom:12px;"><a href="/admin/tutorials.php?subject_id=${tutorial.subject_id}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to ${tutorial.subject_name} tutorials</a></div>
+    <div class="toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <span class="meta" style="font-weight:600;">${questions.length} question${questions.length === 1 ? '' : 's'} in ${tutorial.title}</span>
+      <a href="/admin/question_form.php?tutorial_id=${tutorialId}" class="btn btn-primary" style="background:#102A56; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:600; font-size:13px;">+ New Question</a>
+    </div>
+    ${questions.length === 0 ? '<div class="empty">No questions in this tutorial yet.</div>' : `
+      <table style="width:100%; border-collapse:collapse; background:#fff; border:1px solid #E2E8F0; border-radius:8px;">
+        <thead>
+          <tr style="text-align:left; border-bottom:2px solid #E2E8F0; font-size:12px; color:#64748B;">
+            <th style="padding:10px;">Code</th>
+            <th style="padding:10px;">Topic</th>
+            <th style="padding:10px;">Title</th>
+            <th style="padding:10px; text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+    `}
+  `;
+
+  res.send(renderAdminLayout(`${tutorial.title} — Questions`, 'subjects', bodyHtml));
+});
+
+app.get('/admin/question_form.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const tutorial = db.prepare('SELECT t.*, s.name AS subject_name FROM tutorials t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?').get(tutorialId);
+  if (!tutorial) return res.redirect('/admin/subjects.php');
+
+  const id = parseInt(req.query.id, 10) || 0;
+  let q = null;
+  if (id) {
+    q = db.prepare('SELECT * FROM questions WHERE id = ? AND tutorial_id = ?').get(id, tutorialId);
+  }
+
+  const given = q ? JSON.parse(q.given_json || '[]') : [['', '']];
+  const hint = q ? JSON.parse(q.hint_json || '{}') : { approach: '', formulas: [''], plan: [''], tip: '' };
+  const parts = q ? JSON.parse(q.parts_json || '[]') : [{ label: '', value: '', unit: '' }];
+  const steps = q ? JSON.parse(q.steps_json || '[]') : [{ t: '', d: '' }];
+
+  if (!given.length) given.push(['', '']);
+  if (!hint.formulas || !hint.formulas.length) hint.formulas = [''];
+  if (!hint.plan || !hint.plan.length) hint.plan = [''];
+  if (!parts.length) parts.push({ label: '', value: '', unit: '' });
+  if (!steps.length) steps.push({ t: '', d: '' });
+
+  function escapeHtml(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  const isCreatedTut = req.query.created_tutorial === '1';
+
+  const givenRowsHtml = given.map(g => `
+    <div class="rep-row" style="display:flex; gap:10px; margin-bottom:10px;">
+      <input type="text" name="given_label[]" placeholder="Label (e.g. v₀)" value="${escapeHtml(g[0] || '')}" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;">
+      <input type="text" name="given_value[]" placeholder="Value (e.g. 50 m/s)" value="${escapeHtml(g[1] || '')}" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;">
+      <button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>
+    </div>
+  `).join('');
+
+  const formulaRowsHtml = hint.formulas.map(f => `
+    <div class="rep-row" style="display:flex; gap:10px; margin-bottom:10px;">
+      <input type="text" name="formula_items[]" value="${escapeHtml(f)}" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;">
+      <button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>
+    </div>
+  `).join('');
+
+  const planRowsHtml = hint.plan.map(p => `
+    <div class="rep-row" style="display:flex; gap:10px; margin-bottom:10px;">
+      <textarea name="plan_items[]" rows="2" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;">${escapeHtml(p)}</textarea>
+      <button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>
+    </div>
+  `).join('');
+
+  const partRowsHtml = parts.map(p => `
+    <div class="rep-row" style="display:flex; gap:10px; margin-bottom:10px;">
+      <input type="text" name="part_label[]" placeholder="(a) Velocity at t = 8 s" value="${escapeHtml(p.label || '')}" style="flex:2; padding:8px; border:1px solid #CBD5E1; border-radius:6px;">
+      <input type="text" name="part_value[]" placeholder="Answer value (e.g. 10)" value="${escapeHtml(p.value !== undefined ? p.value : '')}" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;">
+      <input type="text" name="part_unit[]" placeholder="Unit (e.g. m/s)" value="${escapeHtml(p.unit || '')}" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;">
+      <button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>
+    </div>
+  `).join('');
+
+  const stepRowsHtml = steps.map(s => `
+    <div class="rep-row" style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px; background:#F8FAFC; padding:12px; border:1px solid #E2E8F0; border-radius:8px;">
+      <input type="text" name="step_title[]" placeholder="Step title (e.g. Step 1: Integrate acceleration)" value="${escapeHtml(s.t || '')}" style="width:100%; padding:8px; border:1px solid #CBD5E1; border-radius:6px; box-sizing:border-box;">
+      <textarea name="step_desc[]" rows="3" placeholder="Step calculation and explanation" style="width:100%; padding:8px; border:1px solid #CBD5E1; border-radius:6px; box-sizing:border-box;">${escapeHtml(s.d || '')}</textarea>
+      <button type="button" onclick="this.parentElement.remove()" style="align-self:flex-start; background:none; border:1px solid #FCA5A5; color:#DC2626; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:12px;">Remove step</button>
+    </div>
+  `).join('');
+
+  const bodyHtml = `
+    <div style="margin-bottom:12px;"><a href="/admin/questions.php?tutorial_id=${tutorialId}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to ${tutorial.title} questions</a></div>
+    ${isCreatedTut ? '<div class="ok-msg" style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; padding:12px 16px; border-radius:8px; margin-bottom:18px; font-weight:600;">🎉 Tutorial created successfully! Now add your first question for <strong>' + tutorial.title + '</strong> below.</div>' : ''}
+    <form method="post" action="/admin/question_form.php?tutorial_id=${tutorialId}${id ? '&id=' + id : ''}" style="max-width:800px;" id="qForm">
+      <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:20px; margin-bottom:16px;">
+        <h2 style="font-size:16px; margin:0 0 12px 0;">Question Details</h2>
+        <div style="display:flex; gap:12px; margin-bottom:14px;">
+          <div style="flex:1;">
+            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Code * (e.g. T1.6)</label>
+            <input type="text" name="code" value="${escapeHtml(q ? q.code : '')}" required style="width:100%; padding:10px; border:1.5px solid #E2E8F0; border-radius:6px; box-sizing:border-box;">
+          </div>
+          <div style="flex:2;">
+            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Topic *</label>
+            <input type="text" name="topic" value="${escapeHtml(q ? q.topic : '')}" required style="width:100%; padding:10px; border:1.5px solid #E2E8F0; border-radius:6px; box-sizing:border-box;">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Title *</label>
+          <input type="text" name="title" value="${escapeHtml(q ? q.title : '')}" required style="width:100%; padding:10px; border:1.5px solid #E2E8F0; border-radius:6px; box-sizing:border-box;">
+        </div>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Statement *</label>
+          <textarea name="statement" rows="5" required style="width:100%; padding:10px; border:1.5px solid #E2E8F0; border-radius:6px; box-sizing:border-box;">${escapeHtml(q ? q.statement : '')}</textarea>
+        </div>
+        <div class="field">
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Sketch note (optional)</label>
+          <textarea name="sketch" rows="2" style="width:100%; padding:10px; border:1.5px solid #E2E8F0; border-radius:6px; box-sizing:border-box;">${escapeHtml(q && q.sketch ? q.sketch : '')}</textarea>
+        </div>
+      </div>
+
+      <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:20px; margin-bottom:16px;">
+        <h2 style="font-size:16px; margin:0 0 12px 0;">Given Values</h2>
+        <div id="givenRows">${givenRowsHtml}</div>
+        <button type="button" onclick="addGiven()" style="background:none; border:1.5px dashed #CBD5E1; color:#102A56; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px;">+ Add Given Value</button>
+      </div>
+
+      <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:20px; margin-bottom:16px;">
+        <h2 style="font-size:16px; margin:0 0 12px 0;">Hint & Approach</h2>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Approach</label>
+          <textarea name="hint_approach" rows="3" style="width:100%; padding:10px; border:1.5px solid #E2E8F0; border-radius:6px; box-sizing:border-box;">${escapeHtml(hint.approach || '')}</textarea>
+        </div>
+        <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Formulas</label>
+        <div id="formulaRows">${formulaRowsHtml}</div>
+        <button type="button" onclick="addFormula()" style="background:none; border:1.5px dashed #CBD5E1; color:#102A56; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px; margin-bottom:16px;">+ Add Formula</button>
+
+        <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Plan Steps</label>
+        <div id="planRows">${planRowsHtml}</div>
+        <button type="button" onclick="addPlan()" style="background:none; border:1.5px dashed #CBD5E1; color:#102A56; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px; margin-bottom:16px;">+ Add Plan Step</button>
+
+        <div class="field">
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Tip</label>
+          <textarea name="hint_tip" rows="2" style="width:100%; padding:10px; border:1.5px solid #E2E8F0; border-radius:6px; box-sizing:border-box;">${escapeHtml(hint.tip || '')}</textarea>
+        </div>
+      </div>
+
+      <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:20px; margin-bottom:16px;">
+        <h2 style="font-size:16px; margin:0 0 12px 0;">Answer Parts (Interactive Check)</h2>
+        <div id="partRows">${partRowsHtml}</div>
+        <button type="button" onclick="addPart()" style="background:none; border:1.5px dashed #CBD5E1; color:#102A56; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px;">+ Add Answer Part</button>
+      </div>
+
+      <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:20px; margin-bottom:16px;">
+        <h2 style="font-size:16px; margin:0 0 12px 0;">Worked Solution Steps</h2>
+        <div id="stepRows">${stepRowsHtml}</div>
+        <button type="button" onclick="addStep()" style="background:none; border:1.5px dashed #CBD5E1; color:#102A56; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px;">+ Add Worked Step</button>
+      </div>
+
+      <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:20px; margin-bottom:16px;">
+        <h2 style="font-size:16px; margin:0 0 12px 0;">Full Solution (LaTeX / Text)</h2>
+        <textarea name="original" rows="10" style="width:100%; padding:10px; border:1.5px solid #E2E8F0; border-radius:6px; box-sizing:border-box;">${escapeHtml(q ? q.original : '')}</textarea>
+      </div>
+
+      <div class="save-bar" style="display:flex; gap:10px; margin-top:20px;">
+        <a href="/admin/questions.php?tutorial_id=${tutorialId}" class="btn btn-outline" style="padding:10px 16px; border:1px solid #CBD5E1; border-radius:6px; text-decoration:none; color:#334155;">Cancel</a>
+        <button type="submit" class="btn btn-primary" style="background:#102A56; color:#fff; border:none; padding:10px 24px; border-radius:6px; font-weight:600; cursor:pointer;">${q ? 'Save changes' : 'Create question'}</button>
+      </div>
+    </form>
+    <script>
+    function addGiven() {
+      var div = document.createElement('div');
+      div.className = 'rep-row';
+      div.style.cssText = 'display:flex; gap:10px; margin-bottom:10px;';
+      div.innerHTML = '<input type="text" name="given_label[]" placeholder="Label" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><input type="text" name="given_value[]" placeholder="Value" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>';
+      document.getElementById('givenRows').appendChild(div);
+    }
+    function addFormula() {
+      var div = document.createElement('div');
+      div.className = 'rep-row';
+      div.style.cssText = 'display:flex; gap:10px; margin-bottom:10px;';
+      div.innerHTML = '<input type="text" name="formula_items[]" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>';
+      document.getElementById('formulaRows').appendChild(div);
+    }
+    function addPlan() {
+      var div = document.createElement('div');
+      div.className = 'rep-row';
+      div.style.cssText = 'display:flex; gap:10px; margin-bottom:10px;';
+      div.innerHTML = '<textarea name="plan_items[]" rows="2" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"></textarea><button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>';
+      document.getElementById('planRows').appendChild(div);
+    }
+    function addPart() {
+      var div = document.createElement('div');
+      div.className = 'rep-row';
+      div.style.cssText = 'display:flex; gap:10px; margin-bottom:10px;';
+      div.innerHTML = '<input type="text" name="part_label[]" placeholder="Label" style="flex:2; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><input type="text" name="part_value[]" placeholder="Value" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><input type="text" name="part_unit[]" placeholder="Unit" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>';
+      document.getElementById('partRows').appendChild(div);
+    }
+    function addStep() {
+      var div = document.createElement('div');
+      div.className = 'rep-row';
+      div.style.cssText = 'display:flex; flex-direction:column; gap:6px; margin-bottom:12px; background:#F8FAFC; padding:12px; border:1px solid #E2E8F0; border-radius:8px;';
+      div.innerHTML = '<input type="text" name="step_title[]" placeholder="Step title" style="width:100%; padding:8px; border:1px solid #CBD5E1; border-radius:6px; box-sizing:border-box;"><textarea name="step_desc[]" rows="3" placeholder="Step calculation and explanation" style="width:100%; padding:8px; border:1px solid #CBD5E1; border-radius:6px; box-sizing:border-box;"></textarea><button type="button" onclick="this.parentElement.remove()" style="align-self:flex-start; background:none; border:1px solid #FCA5A5; color:#DC2626; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:12px;">Remove step</button>';
+      document.getElementById('stepRows').appendChild(div);
+    }
+    </script>
+  `;
+
+  res.send(renderAdminLayout(q ? 'Edit Question' : 'New Question', 'subjects', bodyHtml));
+});
+
+app.post('/admin/question_form.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const id = parseInt(req.query.id, 10) || 0;
+  const code = (req.body.code || '').trim();
+  const topic = (req.body.topic || '').trim();
+  const title = (req.body.title || '').trim();
+  const statement = (req.body.statement || '').trim();
+  const sketch = (req.body.sketch || '').trim();
+  const figCaption = (req.body.fig_caption || '').trim();
+  const seed = (req.body.seed || '').trim();
+  const approach = (req.body.hint_approach || '').trim();
+  const tip = (req.body.hint_tip || '').trim();
+  const original = (req.body.original || '').trim();
+
+  if (!code || !topic || !title || !statement || !tutorialId) {
+    return res.redirect(`/admin/questions.php?tutorial_id=${tutorialId}`);
+  }
+
+  const givenLabels = Array.isArray(req.body.given_label) ? req.body.given_label : (req.body.given_label ? [req.body.given_label] : []);
+  const givenValues = Array.isArray(req.body.given_value) ? req.body.given_value : (req.body.given_value ? [req.body.given_value] : []);
+  const given = [];
+  givenLabels.forEach((gl, i) => {
+    const l = (gl || '').trim();
+    const v = (givenValues[i] || '').trim();
+    if (l || v) given.push([l, v]);
+  });
+
+  const rawFormulas = Array.isArray(req.body.formula_items) ? req.body.formula_items : (req.body.formula_items ? [req.body.formula_items] : []);
+  const formulas = rawFormulas.map(x => (x || '').trim()).filter(x => x !== '');
+
+  const rawPlan = Array.isArray(req.body.plan_items) ? req.body.plan_items : (req.body.plan_items ? [req.body.plan_items] : []);
+  const plan = rawPlan.map(x => (x || '').trim()).filter(x => x !== '');
+
+  const partLabels = Array.isArray(req.body.part_label) ? req.body.part_label : (req.body.part_label ? [req.body.part_label] : []);
+  const partValues = Array.isArray(req.body.part_value) ? req.body.part_value : (req.body.part_value ? [req.body.part_value] : []);
+  const partUnits = Array.isArray(req.body.part_unit) ? req.body.part_unit : (req.body.part_unit ? [req.body.part_unit] : []);
+  const parts = [];
+  partLabels.forEach((pl, i) => {
+    const l = (pl || '').trim();
+    const v = (partValues[i] || '').trim();
+    const u = (partUnits[i] || '').trim();
+    if (l || v) {
+      parts.push({ label: l, value: !isNaN(v) && v !== '' ? Number(v) : v, unit: u });
+    }
+  });
+
+  const stepTitles = Array.isArray(req.body.step_title) ? req.body.step_title : (req.body.step_title ? [req.body.step_title] : []);
+  const stepDescs = Array.isArray(req.body.step_desc) ? req.body.step_desc : (req.body.step_desc ? [req.body.step_desc] : []);
+  const steps = [];
+  stepTitles.forEach((st, i) => {
+    const t = (st || '').trim();
+    const d = (stepDescs[i] || '').trim();
+    if (t || d) steps.push({ t, d });
+  });
+
+  const givenJson = JSON.stringify(given);
+  const hintJson = JSON.stringify({ approach, formulas, plan, tip });
+  const partsJson = JSON.stringify(parts);
+  const stepsJson = JSON.stringify(steps);
+
+  if (id) {
+    db.prepare(`
+      UPDATE questions SET code = ?, topic = ?, title = ?, statement = ?, sketch = ?, fig_caption = ?, given_json = ?, hint_json = ?, seed = ?, parts_json = ?, steps_json = ?, original = ?
+      WHERE id = ? AND tutorial_id = ?
+    `).run(code, topic, title, statement, sketch || null, figCaption || null, givenJson, hintJson, seed || null, partsJson, stepsJson, original, id, tutorialId);
+  } else {
+    const qKey = 'q' + code.toLowerCase().replace(/[^a-z0-9]/g, '') + Math.random().toString(36).substring(2, 6);
+    const maxOrderRow = db.prepare('SELECT COALESCE(MAX(sort_order), 0) as m FROM questions WHERE tutorial_id = ?').get(tutorialId);
+    const maxOrder = maxOrderRow ? maxOrderRow.m : 0;
+
+    db.prepare(`
+      INSERT INTO questions (tutorial_id, q_key, code, topic, title, statement, sketch, fig_caption, given_json, hint_json, seed, parts_json, steps_json, original, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(tutorialId, qKey, code, topic, title, statement, sketch || null, figCaption || null, givenJson, hintJson, seed || null, partsJson, stepsJson, original, maxOrder + 10);
+  }
+
+  res.redirect(`/admin/questions.php?tutorial_id=${tutorialId}`);
+});
+
+app.post('/admin/question_delete.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const id = parseInt(req.body.id, 10);
+  const tutorialId = parseInt(req.body.tutorial_id, 10);
+
+  if (id) {
+    db.prepare('DELETE FROM questions WHERE id = ?').run(id);
+  }
+
+  res.redirect(`/admin/questions.php?tutorial_id=${tutorialId}`);
 });
 
 // Serve static frontend files

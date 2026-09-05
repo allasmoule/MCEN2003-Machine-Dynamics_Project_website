@@ -40,7 +40,8 @@ admin_page_start($subject['name'], 'subjects', 'subjects.php', 'Back to subjects
       <td><?= (int)$t['question_count'] ?></td>
       <td><?= (int)$t['video_count'] ?></td>
       <td class="row-actions">
-        <a href="questions.php?tutorial_id=<?= (int)$t['id'] ?>">Questions</a>
+        <a href="question_form.php?tutorial_id=<?= (int)$t['id'] ?>" class="btn btn-primary" style="padding:4px 10px; font-size:12px; border-radius:4px; margin-right:6px; color:#fff; text-decoration:none;">+ Add Question</a>
+        <a href="questions.php?tutorial_id=<?= (int)$t['id'] ?>">Questions (<?= (int)$t['question_count'] ?>)</a>
         <a href="videos.php?tutorial_id=<?= (int)$t['id'] ?>">Videos</a>
         <a href="tutorial_form.php?subject_id=<?= $subjectId ?>&id=<?= (int)$t['id'] ?>">Edit</a>
         <form method="post" action="tutorial_delete.php" onsubmit="return confirm('Delete <?= h($t['title']) ?> and all its questions and videos? This cannot be undone.');">
