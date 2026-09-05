@@ -424,6 +424,121 @@ app.post('/api/contact.php', (req, res) => {
   res.json({ ok: true, message: 'Thank you! Your message has been sent successfully.' });
 });
 
+app.post('/api/ai_generate_question.php', async (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+
+  const { provider = 'gemini', api_key, prompt, topic, image_base64 } = req.body || {};
+  const apiKey = (api_key || '').trim();
+  const rawPrompt = (prompt || '').trim();
+
+  if (!rawPrompt) {
+    return res.status(400).json({ error: 'Please enter a prompt or question idea.' });
+  }
+  if (!apiKey) {
+    return res.status(400).json({ error: 'API Key is required. Please enter your Gemini or DeepSeek API key.' });
+  }
+
+  const systemPrompt = `You are a professor in Machine Dynamics and Engineering Mechanics. Create a high-quality university practice question based on the user prompt and optional image. Output MUST be a single raw valid JSON object (DO NOT wrap in markdown or \`\`\`json codeblocks) matching this EXACT schema:
+
+{
+  "code": "T1.X",
+  "topic": "Topic Name",
+  "title": "Short Question Title",
+  "statement": "Complete clear problem statement with numerical values and units.",
+  "sketch": "Brief note on sketching/drawing before solving (or empty).",
+  "given": [
+    ["label", "value"]
+  ],
+  "hint": {
+    "approach": "General physical approach and method",
+    "formulas": ["formula 1", "formula 2"],
+    "plan": ["Step 1 plan", "Step 2 plan"],
+    "tip": "Useful tip for avoiding common mistakes"
+  },
+  "parts": [
+    { "label": "(a) Question part 1", "value": 12.5, "unit": "m/s" }
+  ],
+  "steps": [
+    { "t": "Step 1: Title", "d": "Step 1 detailed working with calculations." }
+  ],
+  "original": "Full worked solution text with all formulas and final numerical answers.",
+  "seed": "Variables seed for built-in calculator"
+}
+${topic ? '\nTopic Context: ' + topic : ''}`;
+
+  try {
+    if (provider === 'gemini') {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const parts = [{ text: systemPrompt + '\n\nUser Request: ' + rawPrompt }];
+
+      if (image_base64 && image_base64.includes('base64,')) {
+        const [meta, data] = image_base64.split('base64,');
+        const mimeMatch = meta.match(/data:([^;]+);/);
+        const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+        parts.push({
+          inline_data: { mime_type: mime, data }
+        });
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: { response_mime_type: 'application/json' }
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        return res.status(500).json({ error: `Gemini API call failed (HTTP ${response.status}): ${errText.substring(0, 150)}` });
+      }
+
+      const resData = await response.json();
+      const text = resData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const cleanJson = text.trim().replace(/^```(json)?|```$/gm, '').trim();
+      const parsed = JSON.parse(cleanJson);
+
+      return res.json({ success: true, data: parsed });
+    } else {
+      // DeepSeek API
+      const url = 'https://api.deepseek.com/chat/completions';
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: rawPrompt }
+          ],
+          response_format: { type: 'json_object' }
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        return res.status(500).json({ error: `DeepSeek API call failed (HTTP ${response.status}): ${errText.substring(0, 150)}` });
+      }
+
+      const resData = await response.json();
+      const text = resData.choices?.[0]?.message?.content || '';
+      const cleanJson = text.trim().replace(/^```(json)?|```$/gm, '').trim();
+      const parsed = JSON.parse(cleanJson);
+
+      return res.json({ success: true, data: parsed });
+    }
+  } catch (err) {
+    return res.status(500).json({ error: 'AI Generation error: ' + err.message });
+  }
+});
+
 // Admin Layout Renderer
 function renderAdminLayout(title, activeTab, contentHtml) {
   return `<!DOCTYPE html>
@@ -1228,6 +1343,52 @@ app.get('/admin/question_form.php', (req, res) => {
 
     <div style="margin-bottom:12px;"><a href="/admin/questions.php?tutorial_id=${tutorialId}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to ${tutorial.title} questions</a></div>
     ${isCreatedTut ? '<div class="ok-msg" style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; padding:12px 16px; border-radius:8px; margin-bottom:18px; font-weight:600;">🎉 Tutorial created successfully! Now add your first question for <strong>' + tutorial.title + '</strong> below.</div>' : ''}
+    
+    <div class="card" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color: #fff; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #334155; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="background:linear-gradient(135deg, #6366F1, #8B5CF6); width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:bold; box-shadow:0 2px 10px rgba(99,102,241,0.3);">✨</div>
+          <div>
+            <h2 style="font-size:17px; margin:0; color:#fff; font-weight:700;">Make Question with AI</h2>
+            <p style="font-size:12.5px; margin:3px 0 0 0; color:#94A3B8;">Auto-generate complete question details, hints, parts & worked solution using Gemini or DeepSeek AI</p>
+          </div>
+        </div>
+        <button type="button" id="aiToggleBtn" onclick="toggleAiBox()" style="background:#334155; border:1px solid #475569; color:#F8FAFC; padding:7px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;">+ Expand AI Generator</button>
+      </div>
+
+      <div id="aiBoxContent" style="display:none; margin-top:20px; padding-top:18px; border-top:1px solid #334155;">
+        <div style="display:flex; gap:14px; margin-bottom:14px; flex-wrap:wrap;">
+          <div style="flex:1; min-width:220px;">
+            <label style="display:block; font-size:12px; font-weight:700; color:#CBD5E1; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.03em;">AI Model</label>
+            <select id="aiProvider" style="width:100%; padding:10px; border-radius:8px; border:1.5px solid #475569; background:#0F172A; color:#fff; font-size:13px; font-weight:500;" onchange="onAiProviderChange()">
+              <option value="gemini">Google Gemini API (Free / Fast / Vision Supported)</option>
+              <option value="deepseek">DeepSeek AI API</option>
+            </select>
+          </div>
+          <div style="flex:2; min-width:280px;">
+            <label style="display:block; font-size:12px; font-weight:700; color:#CBD5E1; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.03em;">API Key (<span id="apiKeyHint" style="color:#A7F3D0; font-weight:400; text-transform:none;">Saved in browser</span>)</label>
+            <input type="password" id="aiApiKey" placeholder="Enter Gemini or DeepSeek API key" style="width:100%; padding:10px; border-radius:8px; border:1.5px solid #475569; background:#0F172A; color:#fff; font-size:13px; box-sizing:border-box;" onchange="saveAiKey()">
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <label style="display:block; font-size:12px; font-weight:700; color:#CBD5E1; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.03em;">Main Prompt / Question Requirements *</label>
+          <textarea id="aiPrompt" rows="3" placeholder="e.g. Create a problem about a particle moving under variable acceleration a(t) = 6t - 4. Find velocity and displacement at t = 3 s. Include step-by-step working." style="width:100%; padding:11px; border-radius:8px; border:1.5px solid #475569; background:#0F172A; color:#fff; font-size:13.5px; box-sizing:border-box; line-height:1.5;"></textarea>
+        </div>
+
+        <div style="margin-bottom:18px;">
+          <label style="display:block; font-size:12px; font-weight:700; color:#CBD5E1; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.03em;">Optional Diagram Photo (Image to Question)</label>
+          <input type="file" id="aiImageFile" accept="image/*" style="font-size:13px; color:#CBD5E1;">
+        </div>
+
+        <div id="aiErrorMsg" style="display:none; background:#7F1D1D; color:#FECACA; border:1px solid #991B1B; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:13px; font-weight:500;"></div>
+
+        <button type="button" id="aiGenBtn" onclick="generateQuestionWithAi()" style="background:linear-gradient(135deg, #4F46E5, #7C3AED); color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:700; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:10px; box-shadow:0 4px 14px rgba(79,70,229,0.4); transition:all 0.2s;">
+          <span id="aiBtnText">🚀 Generate Question & Auto-Fill Form</span>
+        </button>
+      </div>
+    </div>
+
     <form method="post" action="/admin/question_form.php?tutorial_id=${tutorialId}${id ? '&id=' + id : ''}" style="max-width:800px;" id="qForm">
       <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:20px; margin-bottom:16px;">
         <h2 style="font-size:16px; margin:0 0 12px 0;">Question Details</h2>
@@ -1358,6 +1519,195 @@ app.get('/admin/question_form.php', (req, res) => {
       div.innerHTML = '<input type="text" name="step_title[]" placeholder="Step title" style="width:100%; padding:8px; border:1px solid #CBD5E1; border-radius:6px; box-sizing:border-box;"><textarea name="step_desc[]" rows="3" placeholder="Step calculation and explanation" style="width:100%; padding:8px; border:1px solid #CBD5E1; border-radius:6px; box-sizing:border-box;"></textarea><button type="button" onclick="this.parentElement.remove()" style="align-self:flex-start; background:none; border:1px solid #FCA5A5; color:#DC2626; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:12px;">Remove step</button>';
       document.getElementById('stepRows').appendChild(div);
     }
+
+    function toggleAiBox() {
+      var content = document.getElementById('aiBoxContent');
+      var btn = document.getElementById('aiToggleBtn');
+      if (content.style.display === 'none') {
+        content.style.display = 'block';
+        btn.textContent = '– Collapse AI Generator';
+        loadAiKey();
+      } else {
+        content.style.display = 'none';
+        btn.textContent = '+ Expand AI Generator';
+      }
+    }
+
+    function onAiProviderChange() {
+      loadAiKey();
+    }
+
+    function loadAiKey() {
+      var provider = document.getElementById('aiProvider').value;
+      var key = localStorage.getItem('ai_key_' + provider) || '';
+      document.getElementById('aiApiKey').value = key;
+    }
+
+    function saveAiKey() {
+      var provider = document.getElementById('aiProvider').value;
+      var key = document.getElementById('aiApiKey').value.trim();
+      if (key) {
+        localStorage.setItem('ai_key_' + provider, key);
+      }
+    }
+
+    async function generateQuestionWithAi() {
+      var provider = document.getElementById('aiProvider').value;
+      var apiKey = document.getElementById('aiApiKey').value.trim();
+      var prompt = document.getElementById('aiPrompt').value.trim();
+      var topic = (document.querySelector('input[name="topic"]') ? document.querySelector('input[name="topic"]').value : '').trim();
+
+      var errBox = document.getElementById('aiErrorMsg');
+      errBox.style.display = 'none';
+
+      if (!apiKey) {
+        errBox.textContent = 'Please enter your ' + (provider === 'gemini' ? 'Google Gemini' : 'DeepSeek') + ' API key.';
+        errBox.style.display = 'block';
+        return;
+      }
+      if (!prompt) {
+        errBox.textContent = 'Please enter a prompt or question requirement.';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      saveAiKey();
+
+      var btn = document.getElementById('aiGenBtn');
+      var btnText = document.getElementById('aiBtnText');
+      btn.disabled = true;
+      btnText.textContent = '⏳ Generating Question... Please wait';
+
+      var imageBase64 = null;
+      var fileInput = document.getElementById('aiImageFile');
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        try {
+          imageBase64 = await new Promise(function(resolve, reject) {
+            var reader = new FileReader();
+            reader.onload = function(e) { resolve(e.target.result); };
+            reader.onerror = reject;
+            reader.readAsDataURL(fileInput.files[0]);
+          });
+        } catch(e) {}
+      }
+
+      try {
+        var res = await fetch('/api/ai_generate_question.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: provider,
+            api_key: apiKey,
+            prompt: prompt,
+            topic: topic,
+            image_base64: imageBase64
+          })
+        });
+
+        var data = await res.json();
+
+        if (!res.ok || data.error) {
+          throw new Error(data.error || 'Failed to generate question with AI');
+        }
+
+        if (data.success && data.data) {
+          applyAiDataToForm(data.data);
+          alert('🎉 Success! Question generated and form fields auto-filled below. Please review and click Save.');
+        } else {
+          throw new Error('Invalid response received from AI service.');
+        }
+      } catch (err) {
+        errBox.textContent = err.message || 'An error occurred during AI generation.';
+        errBox.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = '🚀 Generate Question & Auto-Fill Form';
+      }
+    }
+
+    function applyAiDataToForm(d) {
+      if (d.code) document.querySelector('input[name="code"]').value = d.code;
+      if (d.topic) document.querySelector('input[name="topic"]').value = d.topic;
+      if (d.title) document.querySelector('input[name="title"]').value = d.title;
+      if (d.statement) document.querySelector('textarea[name="statement"]').value = d.statement;
+      if (d.sketch !== undefined) document.querySelector('textarea[name="sketch"]').value = d.sketch || '';
+
+      if (d.given && Array.isArray(d.given)) {
+        document.getElementById('givenRows').innerHTML = '';
+        d.given.forEach(function(g) {
+          addGivenWithValues(g[0] || '', g[1] || '');
+        });
+      }
+
+      if (d.hint) {
+        if (d.hint.approach) document.querySelector('textarea[name="hint_approach"]').value = d.hint.approach;
+        if (d.hint.tip) document.querySelector('textarea[name="hint_tip"]').value = d.hint.tip;
+
+        if (d.hint.formulas && Array.isArray(d.hint.formulas)) {
+          document.getElementById('formulaRows').innerHTML = '';
+          d.hint.formulas.forEach(function(f) { addFormulaWithValue(f); });
+        }
+        if (d.hint.plan && Array.isArray(d.hint.plan)) {
+          document.getElementById('planRows').innerHTML = '';
+          d.hint.plan.forEach(function(p) { addPlanWithValue(p); });
+        }
+      }
+
+      if (d.parts && Array.isArray(d.parts)) {
+        document.getElementById('partRows').innerHTML = '';
+        d.parts.forEach(function(p) {
+          addPartWithValues(p.label || '', p.value !== undefined ? p.value : '', p.unit || '');
+        });
+      }
+
+      if (d.steps && Array.isArray(d.steps)) {
+        document.getElementById('stepRows').innerHTML = '';
+        d.steps.forEach(function(s) {
+          addStepWithValues(s.t || '', s.d || '');
+        });
+      }
+
+      if (d.original) document.querySelector('textarea[name="original"]').value = d.original;
+      if (d.seed !== undefined) document.querySelector('textarea[name="seed"]').value = d.seed || '';
+    }
+
+    function addGivenWithValues(l, v) {
+      var div = document.createElement('div');
+      div.className = 'rep-row';
+      div.style.cssText = 'display:flex; gap:10px; margin-bottom:10px;';
+      div.innerHTML = '<input type="text" name="given_label[]" placeholder="Label" value="' + escapeAttr(l) + '" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><input type="text" name="given_value[]" placeholder="Value" value="' + escapeAttr(v) + '" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>';
+      document.getElementById('givenRows').appendChild(div);
+    }
+    function addFormulaWithValue(f) {
+      var div = document.createElement('div');
+      div.className = 'rep-row';
+      div.style.cssText = 'display:flex; gap:10px; margin-bottom:10px;';
+      div.innerHTML = '<input type="text" name="formula_items[]" value="' + escapeAttr(f) + '" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>';
+      document.getElementById('formulaRows').appendChild(div);
+    }
+    function addPlanWithValue(p) {
+      var div = document.createElement('div');
+      div.className = 'rep-row';
+      div.style.cssText = 'display:flex; gap:10px; margin-bottom:10px;';
+      div.innerHTML = '<textarea name="plan_items[]" rows="2" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;">' + escapeHtml(p) + '</textarea><button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>';
+      document.getElementById('planRows').appendChild(div);
+    }
+    function addPartWithValues(l, v, u) {
+      var div = document.createElement('div');
+      div.className = 'rep-row';
+      div.style.cssText = 'display:flex; gap:10px; margin-bottom:10px;';
+      div.innerHTML = '<input type="text" name="part_label[]" placeholder="Label" value="' + escapeAttr(l) + '" style="flex:2; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><input type="text" name="part_value[]" placeholder="Value" value="' + escapeAttr(v) + '" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><input type="text" name="part_unit[]" list="unitSuggestions" placeholder="Unit" value="' + escapeAttr(u) + '" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>';
+      document.getElementById('partRows').appendChild(div);
+    }
+    function addStepWithValues(t, d) {
+      var div = document.createElement('div');
+      div.className = 'rep-row';
+      div.style.cssText = 'display:flex; flex-direction:column; gap:6px; margin-bottom:12px; background:#F8FAFC; padding:12px; border:1px solid #E2E8F0; border-radius:8px;';
+      div.innerHTML = '<input type="text" name="step_title[]" placeholder="Step title" value="' + escapeAttr(t) + '" style="width:100%; padding:8px; border:1px solid #CBD5E1; border-radius:6px; box-sizing:border-box;"><textarea name="step_desc[]" rows="3" placeholder="Step calculation" style="width:100%; padding:8px; border:1px solid #CBD5E1; border-radius:6px; box-sizing:border-box;">' + escapeHtml(d) + '</textarea><button type="button" onclick="this.parentElement.remove()" style="align-self:flex-start; background:none; border:1px solid #FCA5A5; color:#DC2626; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:12px;">Remove step</button>';
+      document.getElementById('stepRows').appendChild(div);
+    }
+    function escapeAttr(s) { return String(s || '').replace(/"/g, '&quot;'); }
+    function escapeHtml(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
     </script>
   `;
 
