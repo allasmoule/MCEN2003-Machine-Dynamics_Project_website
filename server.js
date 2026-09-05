@@ -681,7 +681,7 @@ app.get('/admin/messages.php', (req, res) => {
       <td>
         <strong>${m.name}</strong><br>
         <small style="color: #475569;"><a href="mailto:${m.email}">${m.email}</a></small><br>
-        <small style="color: #64748B;">📞 <a href="tel:${m.phone}">${m.phone}</a></small>
+        <small style="color: #64748B;"><a href="tel:${m.phone}">${m.phone}</a></small>
       </td>
       <td style="max-width: 320px; white-space: pre-wrap; font-weight: normal; font-size: 13.5px; line-height: 1.5; color: #334155;">
         ${m.message}
@@ -1114,7 +1114,7 @@ app.get('/admin/tutorial_form.php', (req, res) => {
 
   const bodyHtml = `
     <div style="margin-bottom:12px;"><a href="/admin/tutorials.php?subject_id=${subjectId}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to ${subject.name} tutorials</a></div>
-    ${isCreatedSubject ? '<div class="ok-msg" style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; padding:12px 16px; border-radius:8px; margin-bottom:18px; font-weight:600;">🎉 Subject created successfully! Now create your first tutorial for <strong>' + subject.name + '</strong> below.</div>' : ''}
+    ${isCreatedSubject ? '<div class="ok-msg" style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; padding:12px 16px; border-radius:8px; margin-bottom:18px; font-weight:600;">Subject created successfully! Now create your first tutorial for <strong>' + subject.name + '</strong> below.</div>' : ''}
     <form method="post" action="/admin/tutorial_form.php?subject_id=${subjectId}${id ? '&id=' + id : ''}" style="max-width:600px;">
       <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:20px; margin-bottom:16px;">
         <div class="field" style="margin-bottom:14px;">
@@ -1342,12 +1342,12 @@ app.get('/admin/question_form.php', (req, res) => {
     </datalist>
 
     <div style="margin-bottom:12px;"><a href="/admin/questions.php?tutorial_id=${tutorialId}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to ${tutorial.title} questions</a></div>
-    ${isCreatedTut ? '<div class="ok-msg" style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; padding:12px 16px; border-radius:8px; margin-bottom:18px; font-weight:600;">🎉 Tutorial created successfully! Now add your first question for <strong>' + tutorial.title + '</strong> below.</div>' : ''}
+    ${isCreatedTut ? '<div class="ok-msg" style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; padding:12px 16px; border-radius:8px; margin-bottom:18px; font-weight:600;">Tutorial created successfully! Now add your first question for <strong>' + tutorial.title + '</strong> below.</div>' : ''}
     
     <div class="card" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color: #fff; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #334155; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; align-items:center; gap:12px;">
-          <div style="background:linear-gradient(135deg, #6366F1, #8B5CF6); width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:bold; box-shadow:0 2px 10px rgba(99,102,241,0.3);">✨</div>
+          <div style="background:linear-gradient(135deg, #6366F1, #8B5CF6); width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:bold; color:#fff; box-shadow:0 2px 10px rgba(99,102,241,0.3);">AI</div>
           <div>
             <h2 style="font-size:17px; margin:0; color:#fff; font-weight:700;">Make Question with AI</h2>
             <p style="font-size:12.5px; margin:3px 0 0 0; color:#94A3B8;">Auto-generate complete question details, hints, parts & worked solution using Gemini or DeepSeek AI</p>
@@ -1384,7 +1384,7 @@ app.get('/admin/question_form.php', (req, res) => {
         <div id="aiErrorMsg" style="display:none; background:#7F1D1D; color:#FECACA; border:1px solid #991B1B; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:13px; font-weight:500;"></div>
 
         <button type="button" id="aiGenBtn" onclick="generateQuestionWithAi()" style="background:linear-gradient(135deg, #4F46E5, #7C3AED); color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:700; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:10px; box-shadow:0 4px 14px rgba(79,70,229,0.4); transition:all 0.2s;">
-          <span id="aiBtnText">🚀 Generate Question & Auto-Fill Form</span>
+          <span id="aiBtnText">Generate Question & Auto-Fill Form</span>
         </button>
       </div>
     </div>
@@ -1576,7 +1576,7 @@ app.get('/admin/question_form.php', (req, res) => {
       var btn = document.getElementById('aiGenBtn');
       var btnText = document.getElementById('aiBtnText');
       btn.disabled = true;
-      btnText.textContent = '⏳ Generating Question... Please wait';
+      btnText.textContent = 'Generating Question... Please wait';
 
       var imageBase64 = null;
       var fileInput = document.getElementById('aiImageFile');
@@ -1612,7 +1612,7 @@ app.get('/admin/question_form.php', (req, res) => {
 
         if (data.success && data.data) {
           applyAiDataToForm(data.data);
-          alert('🎉 Success! Question generated and form fields auto-filled below. Please review and click Save.');
+          alert('Success! Question generated and form fields auto-filled below. Please review and click Save.');
         } else {
           throw new Error('Invalid response received from AI service.');
         }
@@ -1621,7 +1621,7 @@ app.get('/admin/question_form.php', (req, res) => {
         errBox.style.display = 'block';
       } finally {
         btn.disabled = false;
-        btnText.textContent = '🚀 Generate Question & Auto-Fill Form';
+        btnText.textContent = 'Generate Question & Auto-Fill Form';
       }
     }
 

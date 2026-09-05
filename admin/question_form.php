@@ -232,14 +232,14 @@ admin_page_start($q ? 'Edit ' . $q['code'] : 'New Question', 'subjects', 'questi
 ?>
 <?php if (isset($_GET['created_tutorial'])): ?>
   <div class="ok-msg" style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; padding:12px 16px; border-radius:8px; margin-bottom:18px; font-weight:600;">
-    🎉 Tutorial created successfully! Now add your first question for <strong><?= h($tutorial['title']) ?></strong> below.
+    Tutorial created successfully! Now add your first question for <strong><?= h($tutorial['title']) ?></strong> below.
   </div>
 <?php endif; ?>
 
 <div class="card" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color: #fff; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #334155; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
   <div style="display:flex; justify-content:space-between; align-items:center;">
     <div style="display:flex; align-items:center; gap:12px;">
-      <div style="background:linear-gradient(135deg, #6366F1, #8B5CF6); width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:bold; box-shadow:0 2px 10px rgba(99,102,241,0.3);">✨</div>
+      <div style="background:linear-gradient(135deg, #6366F1, #8B5CF6); width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:bold; box-shadow:0 2px 10px rgba(99,102,241,0.3);">AI</div>
       <div>
         <h2 style="font-size:17px; margin:0; color:#fff; font-weight:700;">Make Question with AI</h2>
         <p style="font-size:12.5px; margin:3px 0 0 0; color:#94A3B8;">Auto-generate complete question details, hints, parts & worked solution using Gemini or DeepSeek AI</p>
@@ -276,7 +276,7 @@ admin_page_start($q ? 'Edit ' . $q['code'] : 'New Question', 'subjects', 'questi
     <div id="aiErrorMsg" style="display:none; background:#7F1D1D; color:#FECACA; border:1px solid #991B1B; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:13px; font-weight:500;"></div>
 
     <button type="button" id="aiGenBtn" onclick="generateQuestionWithAi()" style="background:linear-gradient(135deg, #4F46E5, #7C3AED); color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:700; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:10px; box-shadow:0 4px 14px rgba(79,70,229,0.4); transition:all 0.2s;">
-      <span id="aiBtnText">🚀 Generate Question & Auto-Fill Form</span>
+      <span id="aiBtnText">Generate Question & Auto-Fill Form</span>
     </button>
   </div>
 </div>
@@ -517,7 +517,7 @@ async function generateQuestionWithAi() {
   var btn = document.getElementById('aiGenBtn');
   var btnText = document.getElementById('aiBtnText');
   btn.disabled = true;
-  btnText.textContent = '⏳ Generating Question... Please wait';
+  btnText.textContent = 'Generating Question... Please wait';
 
   var imageBase64 = null;
   var fileInput = document.getElementById('aiImageFile');
@@ -553,7 +553,7 @@ async function generateQuestionWithAi() {
 
     if (data.success && data.data) {
       applyAiDataToForm(data.data);
-      alert('🎉 Success! Question generated and form fields auto-filled below. Please review and click Save.');
+      alert('Success! Question generated and form fields auto-filled below. Please review and click Save.');
     } else {
       throw new Error('Invalid response received from AI service.');
     }
@@ -562,7 +562,7 @@ async function generateQuestionWithAi() {
     errBox.style.display = 'block';
   } finally {
     btn.disabled = false;
-    btnText.textContent = '🚀 Generate Question & Auto-Fill Form';
+    btnText.textContent = 'Generate Question & Auto-Fill Form';
   }
 }
 

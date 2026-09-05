@@ -61,7 +61,7 @@ admin_page_start('Contact Messages', 'messages');
       <td>
         <strong><?= h($m['name']) ?></strong><br>
         <small style="color: #475569;"><a href="mailto:<?= h($m['email']) ?>"><?= h($m['email']) ?></a></small><br>
-        <small style="color: #64748B;">📞 <a href="tel:<?= h($m['phone']) ?>"><?= h($m['phone']) ?></a></small>
+        <small style="color: #64748B;"><a href="tel:<?= h($m['phone']) ?>"><?= h($m['phone']) ?></a></small>
       </td>
       <td style="max-width: 320px; white-space: pre-wrap; font-weight: normal; font-size: 13.5px; line-height: 1.5; color: #334155;">
         <?= h($m['message']) ?>
