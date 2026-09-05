@@ -73,6 +73,30 @@ CREATE TABLE IF NOT EXISTS videos (
   CONSTRAINT fk_videos_tutorial FOREIGN KEY (tutorial_id) REFERENCES tutorials(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- PDF documents attached to a tutorial.
+CREATE TABLE IF NOT EXISTS pdfs (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  tutorial_id INT UNSIGNED NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  url VARCHAR(500) NOT NULL,
+  description TEXT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pdfs_tutorial FOREIGN KEY (tutorial_id) REFERENCES tutorials(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Text notes / reading materials attached to a tutorial.
+CREATE TABLE IF NOT EXISTS notes (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  tutorial_id INT UNSIGNED NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  content MEDIUMTEXT NOT NULL,
+  description TEXT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_notes_tutorial FOREIGN KEY (tutorial_id) REFERENCES tutorials(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Generic admin-editable content blocks (e.g. the formula sheet).
 CREATE TABLE IF NOT EXISTS content_blocks (
   block_key VARCHAR(60) NOT NULL PRIMARY KEY,

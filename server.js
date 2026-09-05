@@ -84,6 +84,28 @@ db.exec(`
     FOREIGN KEY (tutorial_id) REFERENCES tutorials(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS pdfs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tutorial_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    url TEXT NOT NULL,
+    description TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tutorial_id) REFERENCES tutorials(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tutorial_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    description TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tutorial_id) REFERENCES tutorials(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS content_blocks (
     block_key TEXT PRIMARY KEY,
     value_json TEXT NOT NULL,
@@ -759,52 +781,78 @@ app.post('/admin/delete-message', (req, res) => {
   res.redirect('/admin/messages.php');
 });
 
-// 3. Subjects Management
 app.get('/admin/subjects.php', (req, res) => {
   const user = getSessionUser(req);
   if (!user || !user.is_admin) return res.redirect('/login.html');
 
   const subjects = db.prepare(`
-    SELECT s.*, (SELECT COUNT(*) FROM tutorials t WHERE t.subject_id = s.id) AS tutorial_count
+    SELECT s.*, 
+           (SELECT COUNT(*) FROM tutorials t WHERE t.subject_id = s.id) AS tutorial_count,
+           (SELECT COUNT(*) FROM questions q JOIN tutorials t ON q.tutorial_id = t.id WHERE t.subject_id = s.id) AS question_count,
+           (SELECT COUNT(*) FROM videos v JOIN tutorials t ON v.tutorial_id = t.id WHERE t.subject_id = s.id) AS video_count,
+           (SELECT COUNT(*) FROM pdfs p JOIN tutorials t ON p.tutorial_id = t.id WHERE t.subject_id = s.id) AS pdf_count,
+           (SELECT COUNT(*) FROM notes n JOIN tutorials t ON n.tutorial_id = t.id WHERE t.subject_id = s.id) AS note_count
     FROM subjects s ORDER BY s.sort_order ASC, s.id ASC
   `).all();
 
-  let tableRows = subjects.map(s => `
-    <tr style="border-bottom:1px solid #E2E8F0;">
-      <td style="padding:12px;"><strong>${s.name}</strong></td>
-      <td style="padding:12px; color:#475569;">${s.institution || ''}</td>
-      <td style="padding:12px;">${s.tutorial_count}</td>
-      <td class="row-actions" style="padding:12px; text-align:right;">
-        <a href="/admin/tutorial_form.php?subject_id=${s.id}" style="margin-right:10px; background:#102A56; color:#fff; padding:5px 10px; border-radius:5px; text-decoration:none; font-weight:600; font-size:12px;">+ Add Tutorial</a>
-        <a href="/admin/tutorials.php?subject_id=${s.id}" style="margin-right:10px; color:#102A56; text-decoration:none; font-weight:600;">Tutorials (${s.tutorial_count})</a>
-        <a href="/admin/subject_form.php?id=${s.id}" style="margin-right:10px; color:#475569; text-decoration:none;">Edit</a>
-        <form method="post" action="/admin/subject_delete.php" style="display:inline;" onsubmit="return confirm('Delete ${s.name} and all its tutorials?');">
-          <input type="hidden" name="id" value="${s.id}">
-          <button type="submit" style="color:#DC2626; background:transparent; border:none; cursor:pointer; font-size:13px;">Delete</button>
-        </form>
-      </td>
-    </tr>
+  let cardsHtml = subjects.map(s => `
+    <div onclick="window.location.href='/admin/tutorials.php?subject_id=${s.id}'" 
+         style="background:#fff; border:1.5px solid #E2E8F0; border-radius:12px; padding:22px; cursor:pointer; transition:all 0.2s ease; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 2px 10px rgba(0,0,0,0.03);"
+         onmouseover="this.style.borderColor='#3B82F6'; this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 24px rgba(59,130,246,0.12)';"
+         onmouseout="this.style.borderColor='#E2E8F0'; this.style.transform='none'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.03)';">
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+          <span style="font-size:11px; font-weight:700; background:#EFF6FF; color:#1D4ED8; padding:3px 9px; border-radius:12px; text-transform:uppercase; letter-spacing:0.04em;">
+            ${s.institution || 'Subject'}
+          </span>
+          <span style="font-size:12px; font-weight:700; background:#F1F5F9; color:#475569; padding:3px 9px; border-radius:12px;">
+            ${s.tutorial_count} Tutorial${s.tutorial_count === 1 ? '' : 's'}
+          </span>
+        </div>
+
+        <h3 style="margin:8px 0 6px 0; font-size:18px; font-weight:700; color:#0F172A; line-height:1.3;">${s.name}</h3>
+        
+        ${s.description ? `
+          <p style="margin:0 0 16px 0; font-size:13px; color:#64748B; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+            ${s.description}
+          </p>
+        ` : `<p style="margin:0 0 16px 0; font-size:13px; color:#94A3B8; font-style:italic;">No description added.</p>`}
+
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px;">
+          <span style="font-size:11.5px; background:#F8FAFC; border:1px solid #E2E8F0; color:#334155; padding:3px 8px; border-radius:6px;">Questions: <strong>${s.question_count || 0}</strong></span>
+          <span style="font-size:11.5px; background:#F8FAFC; border:1px solid #E2E8F0; color:#334155; padding:3px 8px; border-radius:6px;">Videos: <strong>${s.video_count || 0}</strong></span>
+          <span style="font-size:11.5px; background:#F8FAFC; border:1px solid #E2E8F0; color:#334155; padding:3px 8px; border-radius:6px;">PDFs: <strong>${s.pdf_count || 0}</strong></span>
+          <span style="font-size:11.5px; background:#F8FAFC; border:1px solid #E2E8F0; color:#334155; padding:3px 8px; border-radius:6px;">Notes: <strong>${s.note_count || 0}</strong></span>
+        </div>
+      </div>
+
+      <div style="padding-top:14px; border-top:1px solid #F1F5F9; display:flex; justify-content:space-between; align-items:center;" onclick="event.stopPropagation();">
+        <a href="/admin/tutorial_form.php?subject_id=${s.id}" class="btn btn-primary" style="padding:6px 12px; font-size:12px; border-radius:6px; background:#102A56; color:#fff; text-decoration:none; font-weight:600;">+ Add Tutorial</a>
+        
+        <div style="display:flex; align-items:center; gap:10px;">
+          <a href="/admin/tutorials.php?subject_id=${s.id}" style="color:#2563EB; font-weight:600; font-size:12.5px; text-decoration:none;">Open Tutorials &rarr;</a>
+          <a href="/admin/subject_form.php?id=${s.id}" style="color:#64748B; font-size:12.5px; text-decoration:none; font-weight:500;">Edit</a>
+          <form method="post" action="/admin/subject_delete.php" style="display:inline; margin:0;" onsubmit="return confirm('Delete ${s.name} and all its content?');">
+            <input type="hidden" name="id" value="${s.id}">
+            <button type="submit" style="color:#EF4444; background:transparent; border:none; cursor:pointer; font-size:12.5px; font-weight:500; padding:0;">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
   `).join('');
 
   const bodyHtml = `
-    <div class="toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-      <span class="meta" style="font-weight:600;">${subjects.length} subject${subjects.length === 1 ? '' : 's'} on the homepage</span>
-      <a href="/admin/subject_form.php" class="btn btn-primary" style="background:#102A56; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:600; font-size:13px;">+ New Subject</a>
+    <div class="toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div>
+        <h2 style="margin:0; font-size:18px; color:#1E293B; font-weight:700;">Subjects Overview</h2>
+        <span class="meta" style="color:#64748B; font-size:13px;">${subjects.length} subject${subjects.length === 1 ? '' : 's'} active on website</span>
+      </div>
+      <a href="/admin/subject_form.php" class="btn btn-primary" style="background:#102A56; color:#fff; padding:9px 18px; border-radius:8px; text-decoration:none; font-weight:600; font-size:13.5px;">+ New Subject</a>
     </div>
-    ${subjects.length === 0 ? '<div class="empty">No subjects yet — create one to show it on the homepage.</div>' : `
-      <table style="width:100%; border-collapse:collapse; background:#fff; border:1px solid #E2E8F0; border-radius:8px;">
-        <thead>
-          <tr style="text-align:left; border-bottom:2px solid #E2E8F0; font-size:12px; color:#64748B;">
-            <th style="padding:10px;">Name</th>
-            <th style="padding:10px;">Institution</th>
-            <th style="padding:10px;">Tutorials</th>
-            <th style="padding:10px; text-align:right;">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${tableRows}
-        </tbody>
-      </table>
+    ${subjects.length === 0 ? '<div class="empty" style="background:#fff; padding:40px; text-align:center; border-radius:12px; border:1px solid #E2E8F0; color:#64748B;">No subjects yet — click "+ New Subject" to create one.</div>' : `
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+        ${cardsHtml}
+      </div>
     `}
   `;
 
@@ -1042,54 +1090,99 @@ app.get('/admin/tutorials.php', (req, res) => {
 
   const subjectId = parseInt(req.query.subject_id, 10) || 1;
   const subject = db.prepare('SELECT * FROM subjects WHERE id = ?').get(subjectId);
+  if (!subject) return res.redirect('/admin/subjects.php');
 
   const tutorials = db.prepare(`
     SELECT t.*,
            (SELECT COUNT(*) FROM questions q WHERE q.tutorial_id = t.id) AS question_count,
-           (SELECT COUNT(*) FROM videos v WHERE v.tutorial_id = t.id) AS video_count
+           (SELECT COUNT(*) FROM videos v WHERE v.tutorial_id = t.id) AS video_count,
+           (SELECT COUNT(*) FROM pdfs p WHERE p.tutorial_id = t.id) AS pdf_count,
+           (SELECT COUNT(*) FROM notes n WHERE n.tutorial_id = t.id) AS note_count
     FROM tutorials t WHERE t.subject_id = ? ORDER BY t.sort_order ASC, t.id ASC
   `).all(subjectId);
 
-  let tableRows = tutorials.map(t => `
-    <tr style="border-bottom:1px solid #E2E8F0;">
-      <td style="padding:12px;"><strong>${t.title}</strong></td>
-      <td style="padding:12px; color:#475569;">${t.description || ''}</td>
-      <td style="padding:12px;">${t.question_count}</td>
-      <td style="padding:12px;">${t.video_count}</td>
-      <td class="row-actions" style="padding:12px; text-align:right;">
-        <a href="/admin/question_form.php?tutorial_id=${t.id}" style="margin-right:10px; background:#102A56; color:#fff; padding:4px 8px; border-radius:4px; text-decoration:none; font-weight:600; font-size:12px;">+ Add Question</a>
-        <a href="/admin/questions.php?tutorial_id=${t.id}" style="margin-right:10px; color:#102A56; text-decoration:none; font-weight:600;">Questions (${t.question_count})</a>
-        <a href="/admin/tutorial_form.php?subject_id=${subjectId}&id=${t.id}" style="margin-right:10px; color:#475569; text-decoration:none;">Edit</a>
-        <form method="post" action="/admin/tutorial_delete.php" style="display:inline;" onsubmit="return confirm('Delete ${t.title}?');">
-          <input type="hidden" name="id" value="${t.id}">
-          <input type="hidden" name="subject_id" value="${subjectId}">
-          <button type="submit" style="color:#DC2626; background:transparent; border:none; cursor:pointer; font-size:13px;">Delete</button>
-        </form>
-      </td>
-    </tr>
+  let tutorialsHtml = tutorials.map(t => `
+    <div style="background:#fff; border:1.5px solid #E2E8F0; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h3 style="margin:0 0 4px 0; font-size:17px; font-weight:700; color:#0F172A;">${t.title}</h3>
+          ${t.description ? `<p style="margin:0; font-size:13px; color:#64748B;">${t.description}</p>` : ''}
+        </div>
+        <div style="display:flex; gap:8px;">
+          <a href="/admin/tutorial_form.php?subject_id=${subjectId}&id=${t.id}" class="btn btn-outline" style="padding:5px 12px; font-size:12.5px; border-radius:6px; border:1px solid #CBD5E1; text-decoration:none; color:#334155; font-weight:600;">Edit Title</a>
+          <form method="post" action="/admin/tutorial_delete.php" style="display:inline; margin:0;" onsubmit="return confirm('Delete ${t.title} and all its content?');">
+            <input type="hidden" name="id" value="${t.id}">
+            <input type="hidden" name="subject_id" value="${subjectId}">
+            <button type="submit" style="padding:5px 12px; font-size:12.5px; border-radius:6px; border:1px solid #FECACA; background:#FEF2F2; color:#DC2626; font-weight:600; cursor:pointer;">Delete</button>
+          </form>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; background:#F8FAFC; padding:14px; border-radius:10px; border:1px solid #F1F5F9;">
+        <!-- 1. Questions -->
+        <div style="background:#fff; border:1px solid #E2E8F0; padding:12px; border-radius:8px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:700; font-size:13px; color:#1E293B;">Questions</span>
+            <span style="background:#EEF2FF; color:#4F46E5; font-weight:700; font-size:11.5px; padding:2px 8px; border-radius:12px;">${t.question_count}</span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <a href="/admin/question_form.php?tutorial_id=${t.id}" style="flex:1; text-align:center; background:#4F46E5; color:#fff; padding:6px 8px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">+ Add Question</a>
+            <a href="/admin/questions.php?tutorial_id=${t.id}" style="text-align:center; background:#F1F5F9; color:#334155; padding:6px 10px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">Manage</a>
+          </div>
+        </div>
+
+        <!-- 2. Videos -->
+        <div style="background:#fff; border:1px solid #E2E8F0; padding:12px; border-radius:8px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:700; font-size:13px; color:#1E293B;">Videos</span>
+            <span style="background:#FEF3C7; color:#D97706; font-weight:700; font-size:11.5px; padding:2px 8px; border-radius:12px;">${t.video_count}</span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <a href="/admin/video_form.php?tutorial_id=${t.id}" style="flex:1; text-align:center; background:#D97706; color:#fff; padding:6px 8px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">+ Add Video</a>
+            <a href="/admin/videos.php?tutorial_id=${t.id}" style="text-align:center; background:#F1F5F9; color:#334155; padding:6px 10px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">Manage</a>
+          </div>
+        </div>
+
+        <!-- 3. PDF Documents -->
+        <div style="background:#fff; border:1px solid #E2E8F0; padding:12px; border-radius:8px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:700; font-size:13px; color:#1E293B;">PDF Documents</span>
+            <span style="background:#ECFDF5; color:#059669; font-weight:700; font-size:11.5px; padding:2px 8px; border-radius:12px;">${t.pdf_count}</span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <a href="/admin/pdf_form.php?tutorial_id=${t.id}" style="flex:1; text-align:center; background:#059669; color:#fff; padding:6px 8px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">+ Add PDF</a>
+            <a href="/admin/pdfs.php?tutorial_id=${t.id}" style="text-align:center; background:#F1F5F9; color:#334155; padding:6px 10px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">Manage</a>
+          </div>
+        </div>
+
+        <!-- 4. Text Notes -->
+        <div style="background:#fff; border:1px solid #E2E8F0; padding:12px; border-radius:8px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:700; font-size:13px; color:#1E293B;">Text / Notes</span>
+            <span style="background:#F3E8FF; color:#7C3AED; font-weight:700; font-size:11.5px; padding:2px 8px; border-radius:12px;">${t.note_count}</span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <a href="/admin/note_form.php?tutorial_id=${t.id}" style="flex:1; text-align:center; background:#7C3AED; color:#fff; padding:6px 8px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">+ Add Text Note</a>
+            <a href="/admin/notes.php?tutorial_id=${t.id}" style="text-align:center; background:#F1F5F9; color:#334155; padding:6px 10px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">Manage</a>
+          </div>
+        </div>
+      </div>
+    </div>
   `).join('');
 
   const bodyHtml = `
     <div style="margin-bottom:12px;"><a href="/admin/subjects.php" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to Subjects</a></div>
-    <div class="toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-      <span class="meta" style="font-weight:600;">${tutorials.length} tutorial${tutorials.length === 1 ? '' : 's'} under ${subject ? subject.name : 'Subject'}</span>
-      <a href="/admin/tutorial_form.php?subject_id=${subjectId}" class="btn btn-primary" style="background:#102A56; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:600; font-size:13px;">+ New Tutorial</a>
+    <div class="toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div>
+        <h2 style="margin:0; font-size:18px; color:#1E293B; font-weight:700;">${subject.name} Tutorials</h2>
+        <span class="meta" style="color:#64748B; font-size:13px;">${tutorials.length} tutorial${tutorials.length === 1 ? '' : 's'} active</span>
+      </div>
+      <a href="/admin/tutorial_form.php?subject_id=${subjectId}" class="btn btn-primary" style="background:#102A56; color:#fff; padding:9px 18px; border-radius:8px; text-decoration:none; font-weight:600; font-size:13.5px;">+ New Tutorial</a>
     </div>
-    ${tutorials.length === 0 ? '<div class="empty">No tutorials for this subject yet.</div>' : `
-      <table style="width:100%; border-collapse:collapse; background:#fff; border:1px solid #E2E8F0; border-radius:8px;">
-        <thead>
-          <tr style="text-align:left; border-bottom:2px solid #E2E8F0; font-size:12px; color:#64748B;">
-            <th style="padding:10px;">Title</th>
-            <th style="padding:10px;">Description</th>
-            <th style="padding:10px;">Questions</th>
-            <th style="padding:10px;">Videos</th>
-            <th style="padding:10px; text-align:right;">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${tableRows}
-        </tbody>
-      </table>
+    ${tutorials.length === 0 ? '<div class="empty" style="background:#fff; padding:40px; text-align:center; border-radius:12px; border:1px solid #E2E8F0; color:#64748B;">No tutorials for this subject yet.</div>' : `
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        ${tutorialsHtml}
+      </div>
     `}
   `;
 
@@ -1808,6 +1901,289 @@ app.post('/admin/question_delete.php', (req, res) => {
   }
 
   res.redirect(`/admin/questions.php?tutorial_id=${tutorialId}`);
+});
+
+// PDF Documents Management Routes
+app.get('/admin/pdfs.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const tutorial = db.prepare('SELECT t.*, s.name AS subject_name FROM tutorials t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?').get(tutorialId);
+  if (!tutorial) return res.redirect('/admin/subjects.php');
+
+  const pdfs = db.prepare('SELECT * FROM pdfs WHERE tutorial_id = ? ORDER BY sort_order ASC, id ASC').all(tutorialId);
+
+  let tableRows = pdfs.map(p => `
+    <tr style="border-bottom:1px solid #F1F5F9;">
+      <td style="padding:14px 16px; font-weight:600; color:#0F172A;">${p.title}</td>
+      <td style="padding:14px 16px;"><a href="${p.url}" target="_blank" rel="noopener" style="color:#2563EB; font-weight:500; text-decoration:none;">Open PDF &rarr;</a></td>
+      <td style="padding:14px 16px; color:#64748B; font-size:13px;">${p.description || '—'}</td>
+      <td class="row-actions" style="padding:14px 16px; text-align:right;">
+        <a href="/admin/pdf_form.php?tutorial_id=${tutorialId}&id=${p.id}" style="color:#475569; font-weight:600; text-decoration:none; margin-right:12px;">Edit</a>
+        <form method="post" action="/admin/pdf_delete.php" style="display:inline; margin:0;" onsubmit="return confirm('Delete this PDF?');">
+          <input type="hidden" name="id" value="${p.id}">
+          <input type="hidden" name="tutorial_id" value="${tutorialId}">
+          <button type="submit" style="color:#DC2626; background:transparent; border:none; cursor:pointer; font-weight:600; font-size:13px; padding:0;">Delete</button>
+        </form>
+      </td>
+    </tr>
+  `).join('');
+
+  const bodyHtml = `
+    <div style="margin-bottom:12px;"><a href="/admin/tutorials.php?subject_id=${tutorial.subject_id}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to ${tutorial.subject_name} tutorials</a></div>
+    <div class="toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div>
+        <h2 style="margin:0; font-size:18px; color:#1E293B; font-weight:700;">PDF Documents for ${tutorial.title}</h2>
+        <span class="meta" style="color:#64748B; font-size:13px;">${pdfs.length} PDF document${pdfs.length === 1 ? '' : 's'} attached</span>
+      </div>
+      <a href="/admin/pdf_form.php?tutorial_id=${tutorialId}" class="btn btn-primary" style="background:#059669; color:#fff; padding:9px 18px; border-radius:8px; text-decoration:none; font-weight:600; font-size:13.5px;">+ New PDF</a>
+    </div>
+    ${pdfs.length === 0 ? '<div class="empty" style="background:#fff; padding:40px; text-align:center; border-radius:12px; border:1px solid #E2E8F0; color:#64748B;">No PDF documents added yet.</div>' : `
+      <table style="width:100%; border-collapse:collapse; background:#fff; border:1px solid #E2E8F0; border-radius:10px; overflow:hidden;">
+        <thead>
+          <tr style="background:#F8FAFC; border-bottom:2px solid #E2E8F0; text-align:left; font-size:12.5px; color:#475569;">
+            <th style="padding:12px 16px;">Title</th>
+            <th style="padding:12px 16px;">Link / File</th>
+            <th style="padding:12px 16px;">Description</th>
+            <th style="padding:12px 16px; text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+    `}
+  `;
+
+  res.send(renderAdminLayout('PDF Documents', 'subjects', bodyHtml));
+});
+
+app.get('/admin/pdf_form.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const tutorial = db.prepare('SELECT t.*, s.name AS subject_name FROM tutorials t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?').get(tutorialId);
+  if (!tutorial) return res.redirect('/admin/subjects.php');
+
+  const id = parseInt(req.query.id, 10) || 0;
+  let p = null;
+  if (id) {
+    p = db.prepare('SELECT * FROM pdfs WHERE id = ? AND tutorial_id = ?').get(id, tutorialId);
+  }
+
+  const bodyHtml = `
+    <div style="margin-bottom:12px;"><a href="/admin/pdfs.php?tutorial_id=${tutorialId}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to PDF documents</a></div>
+    <form method="post" action="/admin/pdf_form.php?tutorial_id=${tutorialId}${id ? '&id=' + id : ''}" style="max-width:640px;">
+      <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:12px; padding:24px; margin-bottom:20px;">
+        <div class="field" style="margin-bottom:16px;">
+          <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">Document Title *</label>
+          <input type="text" name="title" value="${p ? (p.title || '') : ''}" placeholder="e.g. Lecture Notes — Chapter 2 Dynamics PDF" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div class="field" style="margin-bottom:16px;">
+          <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">PDF Link / URL *</label>
+          <input type="text" name="url" value="${p ? (p.url || '') : ''}" placeholder="https://example.com/document.pdf or file link" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div class="field" style="margin-bottom:16px;">
+          <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">Description / Notes <span style="font-weight:400; color:#64748B;">(optional)</span></label>
+          <textarea name="description" rows="3" placeholder="Brief summary of what this PDF covers..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box; line-height:1.5;">${p ? (p.description || '') : ''}</textarea>
+        </div>
+      </div>
+      <div class="save-bar" style="display:flex; gap:12px;">
+        <a href="/admin/pdfs.php?tutorial_id=${tutorialId}" class="btn btn-outline" style="padding:10px 20px; border-radius:8px; border:1px solid #CBD5E1; text-decoration:none; color:#334155; font-weight:600;">Cancel</a>
+        <button type="submit" class="btn btn-primary" style="background:#059669; color:#fff; padding:10px 24px; border-radius:8px; border:none; font-weight:700; cursor:pointer;">${p ? 'Save changes' : 'Add PDF Document'}</button>
+      </div>
+    </form>
+  `;
+
+  res.send(renderAdminLayout(p ? 'Edit PDF' : 'New PDF', 'subjects', bodyHtml));
+});
+
+app.post('/admin/pdf_form.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const id = parseInt(req.query.id, 10) || 0;
+  const title = (req.body.title || '').trim();
+  const url = (req.body.url || '').trim();
+  const description = (req.body.description || '').trim();
+
+  if (!title || !url || !tutorialId) {
+    return res.redirect(`/admin/pdfs.php?tutorial_id=${tutorialId}`);
+  }
+
+  if (id) {
+    db.prepare('UPDATE pdfs SET title = ?, url = ?, description = ? WHERE id = ? AND tutorial_id = ?').run(title, url, description || null, id, tutorialId);
+  } else {
+    const maxOrderRow = db.prepare('SELECT COALESCE(MAX(sort_order), 0) as m FROM pdfs WHERE tutorial_id = ?').get(tutorialId);
+    const maxOrder = maxOrderRow ? maxOrderRow.m : 0;
+    db.prepare('INSERT INTO pdfs (tutorial_id, title, url, description, sort_order) VALUES (?, ?, ?, ?, ?)').run(tutorialId, title, url, description || null, maxOrder + 10);
+  }
+
+  res.redirect(`/admin/pdfs.php?tutorial_id=${tutorialId}`);
+});
+
+app.post('/admin/pdf_delete.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const id = parseInt(req.body.id, 10);
+  const tutorialId = parseInt(req.body.tutorial_id, 10);
+
+  if (id) {
+    db.prepare('DELETE FROM pdfs WHERE id = ?').run(id);
+  }
+
+  res.redirect(`/admin/pdfs.php?tutorial_id=${tutorialId}`);
+});
+
+// Text Notes Management Routes
+app.get('/admin/notes.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const tutorial = db.prepare('SELECT t.*, s.name AS subject_name FROM tutorials t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?').get(tutorialId);
+  if (!tutorial) return res.redirect('/admin/subjects.php');
+
+  const notes = db.prepare('SELECT * FROM notes WHERE tutorial_id = ? ORDER BY sort_order ASC, id ASC').all(tutorialId);
+
+  let notesHtml = notes.map(n => `
+    <div style="background:#fff; border:1.5px solid #E2E8F0; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+        <div>
+          <h3 style="margin:0 0 4px 0; font-size:16.5px; font-weight:700; color:#0F172A;">${n.title}</h3>
+          ${n.description ? `<span style="font-size:12px; color:#64748B; background:#F1F5F9; padding:2px 8px; border-radius:4px;">${n.description}</span>` : ''}
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <a href="/admin/note_form.php?tutorial_id=${tutorialId}&id=${n.id}" style="color:#475569; font-weight:600; text-decoration:none; font-size:13px;">Edit</a>
+          <form method="post" action="/admin/note_delete.php" style="display:inline; margin:0;" onsubmit="return confirm('Delete this text note?');">
+            <input type="hidden" name="id" value="${n.id}">
+            <input type="hidden" name="tutorial_id" value="${tutorialId}">
+            <button type="submit" style="color:#DC2626; background:transparent; border:none; cursor:pointer; font-weight:600; font-size:13px; padding:0;">Delete</button>
+          </form>
+        </div>
+      </div>
+      <div style="background:#F8FAFC; border:1px solid #F1F5F9; border-radius:8px; padding:14px 16px; font-size:13.5px; line-height:1.6; color:#334155; white-space:pre-wrap; max-height:220px; overflow-y:auto;">
+        ${n.content}
+      </div>
+    </div>
+  `).join('');
+
+  const bodyHtml = `
+    <div style="margin-bottom:12px;"><a href="/admin/tutorials.php?subject_id=${tutorial.subject_id}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to ${tutorial.subject_name} tutorials</a></div>
+    <div class="toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div>
+        <h2 style="margin:0; font-size:18px; color:#1E293B; font-weight:700;">Text Notes & Reading Material for ${tutorial.title}</h2>
+        <span class="meta" style="color:#64748B; font-size:13px;">${notes.length} text note${notes.length === 1 ? '' : 's'} attached</span>
+      </div>
+      <a href="/admin/note_form.php?tutorial_id=${tutorialId}" class="btn btn-primary" style="background:#7C3AED; color:#fff; padding:9px 18px; border-radius:8px; text-decoration:none; font-weight:600; font-size:13.5px;">+ New Text Note</a>
+    </div>
+    ${notes.length === 0 ? '<div class="empty" style="background:#fff; padding:40px; text-align:center; border-radius:12px; border:1px solid #E2E8F0; color:#64748B;">No text notes added yet.</div>' : `
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        ${notesHtml}
+      </div>
+    `}
+  `;
+
+  res.send(renderAdminLayout('Text Notes', 'subjects', bodyHtml));
+});
+
+app.get('/admin/note_form.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const tutorial = db.prepare('SELECT t.*, s.name AS subject_name FROM tutorials t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?').get(tutorialId);
+  if (!tutorial) return res.redirect('/admin/subjects.php');
+
+  const id = parseInt(req.query.id, 10) || 0;
+  let n = null;
+  if (id) {
+    n = db.prepare('SELECT * FROM notes WHERE id = ? AND tutorial_id = ?').get(id, tutorialId);
+  }
+
+  const bodyHtml = `
+    <div style="margin-bottom:12px;"><a href="/admin/notes.php?tutorial_id=${tutorialId}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to text notes</a></div>
+    <form method="post" action="/admin/note_form.php?tutorial_id=${tutorialId}${id ? '&id=' + id : ''}" style="max-width:720px;">
+      <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:12px; padding:24px; margin-bottom:20px;">
+        <div class="field" style="margin-bottom:16px;">
+          <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">Note Title *</label>
+          <input type="text" name="title" value="${n ? (n.title || '') : ''}" placeholder="e.g. Fundamental Concepts & Key Equations" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div class="field" style="margin-bottom:16px;">
+          <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">Category / Tag <span style="font-weight:400; color:#64748B;">(optional)</span></label>
+          <input type="text" name="description" value="${n ? (n.description || '') : ''}" placeholder="e.g. Summary, Formulas, Homework Tip" style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div class="field" style="margin-bottom:16px;">
+          <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">Text / Content Body *</label>
+          <textarea name="content" rows="10" placeholder="Write full text notes, explanations, formulas, or study instructions here..." required style="width:100%; padding:12px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box; line-height:1.6; font-family:inherit;">${n ? (n.content || '') : ''}</textarea>
+        </div>
+      </div>
+      <div class="save-bar" style="display:flex; gap:12px;">
+        <a href="/admin/notes.php?tutorial_id=${tutorialId}" class="btn btn-outline" style="padding:10px 20px; border-radius:8px; border:1px solid #CBD5E1; text-decoration:none; color:#334155; font-weight:600;">Cancel</a>
+        <button type="submit" class="btn btn-primary" style="background:#7C3AED; color:#fff; padding:10px 24px; border-radius:8px; border:none; font-weight:700; cursor:pointer;">${n ? 'Save changes' : 'Add Text Note'}</button>
+      </div>
+    </form>
+  `;
+
+  res.send(renderAdminLayout(n ? 'Edit Text Note' : 'New Text Note', 'subjects', bodyHtml));
+});
+
+app.post('/admin/note_form.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const id = parseInt(req.query.id, 10) || 0;
+  const title = (req.body.title || '').trim();
+  const content = (req.body.content || '').trim();
+  const description = (req.body.description || '').trim();
+
+  if (!title || !content || !tutorialId) {
+    return res.redirect(`/admin/notes.php?tutorial_id=${tutorialId}`);
+  }
+
+  if (id) {
+    db.prepare('UPDATE notes SET title = ?, content = ?, description = ? WHERE id = ? AND tutorial_id = ?').run(title, content, description || null, id, tutorialId);
+  } else {
+    const maxOrderRow = db.prepare('SELECT COALESCE(MAX(sort_order), 0) as m FROM notes WHERE tutorial_id = ?').get(tutorialId);
+    const maxOrder = maxOrderRow ? maxOrderRow.m : 0;
+    db.prepare('INSERT INTO notes (tutorial_id, title, content, description, sort_order) VALUES (?, ?, ?, ?, ?)').run(tutorialId, title, content, description || null, maxOrder + 10);
+  }
+
+  res.redirect(`/admin/notes.php?tutorial_id=${tutorialId}`);
+});
+
+app.post('/admin/note_delete.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const id = parseInt(req.body.id, 10);
+  const tutorialId = parseInt(req.body.tutorial_id, 10);
+
+  if (id) {
+    db.prepare('DELETE FROM notes WHERE id = ?').run(id);
+  }
+
+  res.redirect(`/admin/notes.php?tutorial_id=${tutorialId}`);
+});
+
+// API Routes for PDFs and Text Notes
+app.get('/api/pdfs.php', (req, res) => {
+  const tutorialId = parseInt(req.query.tutorial, 10) || 0;
+  if (!tutorialId) return res.json({ pdfs: [] });
+  const rows = db.prepare('SELECT * FROM pdfs WHERE tutorial_id = ? ORDER BY sort_order ASC, id ASC').all(tutorialId);
+  res.json({ pdfs: rows });
+});
+
+app.get('/api/notes.php', (req, res) => {
+  const tutorialId = parseInt(req.query.tutorial, 10) || 0;
+  if (!tutorialId) return res.json({ notes: [] });
+  const rows = db.prepare('SELECT * FROM notes WHERE tutorial_id = ? ORDER BY sort_order ASC, id ASC').all(tutorialId);
+  res.json({ notes: rows });
 });
 
 // Serve static frontend files

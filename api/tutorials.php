@@ -18,7 +18,9 @@ if (!$subject) {
 $stmt = $pdo->prepare('
     SELECT t.id, t.slug, t.title, t.description,
            (SELECT COUNT(*) FROM questions q WHERE q.tutorial_id = t.id) AS question_count,
-           (SELECT COUNT(*) FROM videos v WHERE v.tutorial_id = t.id) AS video_count
+           (SELECT COUNT(*) FROM videos v WHERE v.tutorial_id = t.id) AS video_count,
+           (SELECT COUNT(*) FROM pdfs p WHERE p.tutorial_id = t.id) AS pdf_count,
+           (SELECT COUNT(*) FROM notes n WHERE n.tutorial_id = t.id) AS note_count
     FROM tutorials t WHERE t.subject_id = ? ORDER BY t.sort_order ASC, t.id ASC
 ');
 $stmt->execute([$subject['id']]);
