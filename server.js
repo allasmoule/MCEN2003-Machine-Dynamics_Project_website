@@ -347,11 +347,6 @@ app.get('/api/tutorials.php', (req, res) => {
 });
 
 app.get('/api/questions.php', (req, res) => {
-  const user = getSessionUser(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
   let tutorialId = parseInt(req.query.tutorial, 10) || 0;
   if (!tutorialId) {
     const first = db.prepare('SELECT id FROM tutorials ORDER BY id ASC LIMIT 1').get();
@@ -401,11 +396,6 @@ app.get('/api/questions.php', (req, res) => {
 });
 
 app.get('/api/formula_sheet.php', (req, res) => {
-  const user = getSessionUser(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
   const tutorialId = parseInt(req.query.tutorial, 10) || 0;
   let row = null;
   if (tutorialId) {
@@ -419,11 +409,6 @@ app.get('/api/formula_sheet.php', (req, res) => {
 });
 
 app.get('/api/videos.php', (req, res) => {
-  const user = getSessionUser(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
   let tutorialId = parseInt(req.query.tutorial, 10) || 0;
   if (!tutorialId) {
     const first = db.prepare('SELECT id FROM tutorials ORDER BY id ASC LIMIT 1').get();

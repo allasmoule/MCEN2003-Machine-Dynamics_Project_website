@@ -1372,12 +1372,32 @@ fsToggle.addEventListener("click",()=>{
   fsToggle.classList.toggle("active",open);
 });
 const videosPanel=document.getElementById("videosPanel"), videosToggle=document.getElementById("videosToggle");
-videosToggle.addEventListener("click",()=>{
-  const open=videosPanel.hidden;
-  videosPanel.hidden=!open;
-  videosToggle.setAttribute("aria-pressed",open?"true":"false");
-  videosToggle.classList.toggle("active",open);
-});
+if(videosToggle && videosPanel){
+  videosToggle.addEventListener("click",()=>{
+    const open=videosPanel.hidden;
+    videosPanel.hidden=!open;
+    videosToggle.setAttribute("aria-pressed",open?"true":"false");
+    videosToggle.classList.toggle("active",open);
+  });
+}
+const pdfsPanel=document.getElementById("pdfsPanel"), pdfsToggle=document.getElementById("pdfsToggle");
+if(pdfsToggle && pdfsPanel){
+  pdfsToggle.addEventListener("click",()=>{
+    const open=pdfsPanel.hidden;
+    pdfsPanel.hidden=!open;
+    pdfsToggle.setAttribute("aria-pressed",open?"true":"false");
+    pdfsToggle.classList.toggle("active",open);
+  });
+}
+const notesPanel=document.getElementById("notesPanel"), notesToggle=document.getElementById("notesToggle");
+if(notesToggle && notesPanel){
+  notesToggle.addEventListener("click",()=>{
+    const open=notesPanel.hidden;
+    notesPanel.hidden=!open;
+    notesToggle.setAttribute("aria-pressed",open?"true":"false");
+    notesToggle.classList.toggle("active",open);
+  });
+}
 
 /* ============================================================
    Minimal .docx writer — stored (uncompressed) ZIP + OOXML
@@ -2016,7 +2036,11 @@ function embedHtml(url){
   return '<div class="video-embed"><video controls src="'+esc(url)+'"></video></div>';
 }
 function renderVideos(videos){
-  if(!Array.isArray(videos) || !videos.length) return;
+  if(!videosPanel || !videosToggle) return;
+  if(!Array.isArray(videos) || !videos.length) {
+    videosToggle.hidden = true;
+    return;
+  }
   videosPanel.innerHTML =
     '<div class="fsheet-top"><span class="label">Videos</span></div>' +
     '<div class="video-list">' +
@@ -2028,6 +2052,52 @@ function renderVideos(videos){
     ).join("") +
     '</div>';
   videosToggle.hidden=false;
+}
+
+function renderPdfs(pdfs){
+  if(!pdfsPanel || !pdfsToggle) return;
+  if(!Array.isArray(pdfs) || !pdfs.length){
+    pdfsToggle.hidden = true;
+    return;
+  }
+  pdfsPanel.innerHTML =
+    '<div class="fsheet-top"><span class="label">PDF Documents & Lecture Notes</span></div>' +
+    '<div style="display:flex; flex-direction:column; gap:12px; padding:16px;">' +
+    pdfs.map(p=>
+      '<div style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">' +
+        '<div>' +
+          '<h4 style="margin:0 0 4px 0; font-size:15px; color:#0F172A; font-weight:700;">'+esc(p.title)+'</h4>' +
+          (p.description ? '<p style="margin:0; font-size:13px; color:#64748B;">'+esc(p.description)+'</p>' : '') +
+        '</div>' +
+        '<a href="'+esc(p.url)+'" target="_blank" rel="noopener" style="background:#059669; color:#fff; padding:7px 14px; border-radius:6px; font-weight:700; font-size:12.5px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">View PDF &rarr;</a>' +
+      '</div>'
+    ).join("") +
+    '</div>';
+  pdfsToggle.hidden = false;
+}
+
+function renderNotes(notes){
+  if(!notesPanel || !notesToggle) return;
+  if(!Array.isArray(notes) || !notes.length){
+    notesToggle.hidden = true;
+    return;
+  }
+  notesPanel.innerHTML =
+    '<div class="fsheet-top"><span class="label">Notes & Reading Material</span></div>' +
+    '<div style="display:flex; flex-direction:column; gap:16px; padding:16px;">' +
+    notes.map(n=>
+      '<div style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:16px;">' +
+        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
+          '<h4 style="margin:0; font-size:16px; color:#0F172A; font-weight:700;">'+esc(n.title)+'</h4>' +
+          (n.description ? '<span style="font-size:11.5px; color:#64748B; background:#F1F5F9; padding:2px 8px; border-radius:4px;">'+esc(n.description)+'</span>' : '') +
+        '</div>' +
+        '<div style="background:#F8FAFC; border:1px solid #F1F5F9; border-radius:8px; padding:14px; font-size:13.5px; line-height:1.6; color:#334155; white-space:pre-wrap;">' +
+          esc(n.content) +
+        '</div>' +
+      '</div>'
+    ).join("") +
+    '</div>';
+  notesToggle.hidden = false;
 }
 
 (async function bootstrap(){
@@ -2064,7 +2134,7 @@ function renderVideos(videos){
       renderFormulaSheet(fsData.formula_sheet);
     }
   }catch(e){
-    /* offline / API unreachable — keep the static formula sheet markup */
+    /* offline / API unreachable — keep static */
   }
   try{
     const vUrl = "api/videos.php" + (resolvedTutorialId ? "?tutorial="+encodeURIComponent(resolvedTutorialId) : "");
@@ -2073,9 +2143,24 @@ function renderVideos(videos){
       const vData = await vRes.json();
       renderVideos(vData.videos);
     }
-  }catch(e){
-    /* offline / API unreachable — no videos panel */
-  }
+  }catch(e){}
+  try{
+    const pUrl = "api/pdfs.php" + (resolvedTutorialId ? "?tutorial="+encodeURIComponent(resolvedTutorialId) : "");
+    const pRes = await fetch(pUrl);
+    if(pRes.ok){
+      const pData = await pRes.json();
+      renderPdfs(pData.pdfs);
+    }
+  }catch(e){}
+  try{
+    const nUrl = "api/notes.php" + (resolvedTutorialId ? "?tutorial="+encodeURIComponent(resolvedTutorialId) : "");
+    const nRes = await fetch(nUrl);
+    if(nRes.ok){
+      const nData = await nRes.json();
+      renderNotes(nData.notes);
+    }
+  }catch(e){}
+
   if(active>=QUESTIONS.length || active<0) active=0;
   try{
     render();
