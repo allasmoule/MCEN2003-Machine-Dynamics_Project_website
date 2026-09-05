@@ -660,7 +660,8 @@ app.get('/admin/subjects.php', (req, res) => {
       <td style="padding:12px; color:#475569;">${s.institution || ''}</td>
       <td style="padding:12px;">${s.tutorial_count}</td>
       <td class="row-actions" style="padding:12px; text-align:right;">
-        <a href="/admin/tutorials.php?subject_id=${s.id}" style="margin-right:10px; color:#102A56; text-decoration:none; font-weight:600;">Tutorials</a>
+        <a href="/admin/tutorial_form.php?subject_id=${s.id}" style="margin-right:10px; background:#102A56; color:#fff; padding:5px 10px; border-radius:5px; text-decoration:none; font-weight:600; font-size:12px;">+ Add Tutorial</a>
+        <a href="/admin/tutorials.php?subject_id=${s.id}" style="margin-right:10px; color:#102A56; text-decoration:none; font-weight:600;">Tutorials (${s.tutorial_count})</a>
         <a href="/admin/subject_form.php?id=${s.id}" style="margin-right:10px; color:#475569; text-decoration:none;">Edit</a>
         <form method="post" action="/admin/subject_delete.php" style="display:inline;" onsubmit="return confirm('Delete ${s.name} and all its tutorials?');">
           <input type="hidden" name="id" value="${s.id}">
@@ -745,6 +746,7 @@ app.post('/admin/subject_form.php', (req, res) => {
 
   if (id) {
     db.prepare('UPDATE subjects SET name = ?, institution = ?, description = ? WHERE id = ?').run(name, institution || null, description || null, id);
+    res.redirect('/admin/subjects.php');
   } else {
     let slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'subject';
     let check = db.prepare('SELECT id FROM subjects WHERE slug = ?').get(slug);
@@ -756,10 +758,10 @@ app.post('/admin/subject_form.php', (req, res) => {
       check = db.prepare('SELECT id FROM subjects WHERE slug = ?').get(slug);
     }
     const maxOrder = db.prepare('SELECT COALESCE(MAX(sort_order), 0) as m FROM subjects').get().m;
-    db.prepare('INSERT INTO subjects (slug, name, institution, description, sort_order) VALUES (?, ?, ?, ?, ?)').run(slug, name, institution || null, description || null, maxOrder + 10);
+    const info = db.prepare('INSERT INTO subjects (slug, name, institution, description, sort_order) VALUES (?, ?, ?, ?, ?)').run(slug, name, institution || null, description || null, maxOrder + 10);
+    const newId = info.lastInsertRowid;
+    res.redirect(`/admin/tutorial_form.php?subject_id=${newId}&created_subject=1`);
   }
-
-  res.redirect('/admin/subjects.php');
 });
 
 app.post('/admin/subject_delete.php', (req, res) => {
@@ -918,7 +920,7 @@ app.post('/admin/formula_sheet.php', (req, res) => {
   res.redirect(`/admin/formula_sheet.php?subject_id=${subId}&tutorial_id=${tutId}&saved=1`);
 });
 
-// 5. Tutorials List
+// 5. Tutorials List & Management
 app.get('/admin/tutorials.php', (req, res) => {
   const user = getSessionUser(req);
   if (!user || !user.is_admin) return res.redirect('/login.html');
@@ -927,7 +929,9 @@ app.get('/admin/tutorials.php', (req, res) => {
   const subject = db.prepare('SELECT * FROM subjects WHERE id = ?').get(subjectId);
 
   const tutorials = db.prepare(`
-    SELECT t.*, (SELECT COUNT(*) FROM questions q WHERE q.tutorial_id = t.id) AS question_count
+    SELECT t.*,
+           (SELECT COUNT(*) FROM questions q WHERE q.tutorial_id = t.id) AS question_count,
+           (SELECT COUNT(*) FROM videos v WHERE v.tutorial_id = t.id) AS video_count
     FROM tutorials t WHERE t.subject_id = ? ORDER BY t.sort_order ASC, t.id ASC
   `).all(subjectId);
 
@@ -936,13 +940,23 @@ app.get('/admin/tutorials.php', (req, res) => {
       <td style="padding:12px;"><strong>${t.title}</strong></td>
       <td style="padding:12px; color:#475569;">${t.description || ''}</td>
       <td style="padding:12px;">${t.question_count}</td>
+      <td style="padding:12px;">${t.video_count}</td>
+      <td class="row-actions" style="padding:12px; text-align:right;">
+        <a href="/admin/tutorial_form.php?subject_id=${subjectId}&id=${t.id}" style="margin-right:10px; color:#475569; text-decoration:none;">Edit</a>
+        <form method="post" action="/admin/tutorial_delete.php" style="display:inline;" onsubmit="return confirm('Delete ${t.title}?');">
+          <input type="hidden" name="id" value="${t.id}">
+          <input type="hidden" name="subject_id" value="${subjectId}">
+          <button type="submit" style="color:#DC2626; background:transparent; border:none; cursor:pointer; font-size:13px;">Delete</button>
+        </form>
+      </td>
     </tr>
   `).join('');
 
   const bodyHtml = `
     <div style="margin-bottom:12px;"><a href="/admin/subjects.php" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to Subjects</a></div>
     <div class="toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-      <span class="meta" style="font-weight:600;">${tutorials.length} tutorial${tutorials.length === 1 ? '' : 's'} under ${subject ? subject.name : ''}</span>
+      <span class="meta" style="font-weight:600;">${tutorials.length} tutorial${tutorials.length === 1 ? '' : 's'} under ${subject ? subject.name : 'Subject'}</span>
+      <a href="/admin/tutorial_form.php?subject_id=${subjectId}" class="btn btn-primary" style="background:#102A56; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:600; font-size:13px;">+ New Tutorial</a>
     </div>
     ${tutorials.length === 0 ? '<div class="empty">No tutorials for this subject yet.</div>' : `
       <table style="width:100%; border-collapse:collapse; background:#fff; border:1px solid #E2E8F0; border-radius:8px;">
@@ -951,6 +965,8 @@ app.get('/admin/tutorials.php', (req, res) => {
             <th style="padding:10px;">Title</th>
             <th style="padding:10px;">Description</th>
             <th style="padding:10px;">Questions</th>
+            <th style="padding:10px;">Videos</th>
+            <th style="padding:10px; text-align:right;">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -961,6 +977,91 @@ app.get('/admin/tutorials.php', (req, res) => {
   `;
 
   res.send(renderAdminLayout('Tutorials', 'subjects', bodyHtml));
+});
+
+app.get('/admin/tutorial_form.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const subjectId = parseInt(req.query.subject_id, 10) || 0;
+  const subject = db.prepare('SELECT * FROM subjects WHERE id = ?').get(subjectId);
+  if (!subject) return res.redirect('/admin/subjects.php');
+
+  const id = parseInt(req.query.id, 10) || 0;
+  let tut = null;
+  if (id) {
+    tut = db.prepare('SELECT * FROM tutorials WHERE id = ? AND subject_id = ?').get(id, subjectId);
+  }
+
+  const isCreatedSubject = req.query.created_subject === '1';
+
+  const bodyHtml = `
+    <div style="margin-bottom:12px;"><a href="/admin/tutorials.php?subject_id=${subjectId}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to ${subject.name} tutorials</a></div>
+    ${isCreatedSubject ? '<div class="ok-msg" style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; padding:12px 16px; border-radius:8px; margin-bottom:18px; font-weight:600;">🎉 Subject created successfully! Now create your first tutorial for <strong>' + subject.name + '</strong> below.</div>' : ''}
+    <form method="post" action="/admin/tutorial_form.php?subject_id=${subjectId}${id ? '&id=' + id : ''}" style="max-width:600px;">
+      <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:20px; margin-bottom:16px;">
+        <div class="field" style="margin-bottom:14px;">
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Title *</label>
+          <input type="text" name="title" value="${tut ? tut.title : ''}" placeholder="e.g. Tutorial 1 — Kinematics" required style="width:100%; padding:10px; border:1.5px solid #E2E8F0; border-radius:6px; box-sizing:border-box;">
+        </div>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Description (optional)</label>
+          <textarea name="description" rows="3" style="width:100%; padding:10px; border:1.5px solid #E2E8F0; border-radius:6px; box-sizing:border-box;">${tut && tut.description ? tut.description : ''}</textarea>
+        </div>
+      </div>
+      <div class="save-bar" style="display:flex; gap:10px;">
+        <a href="/admin/tutorials.php?subject_id=${subjectId}" class="btn btn-outline" style="padding:10px 16px; border:1px solid #CBD5E1; border-radius:6px; text-decoration:none; color:#334155;">Cancel</a>
+        <button type="submit" class="btn btn-primary" style="background:#102A56; color:#fff; border:none; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer;">${tut ? 'Save changes' : 'Create tutorial'}</button>
+      </div>
+    </form>
+  `;
+
+  res.send(renderAdminLayout(tut ? 'Edit Tutorial' : 'New Tutorial', 'subjects', bodyHtml));
+});
+
+app.post('/admin/tutorial_form.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const subjectId = parseInt(req.query.subject_id, 10) || 0;
+  const id = parseInt(req.query.id, 10) || 0;
+  const title = (req.body.title || '').trim();
+  const description = (req.body.description || '').trim();
+
+  if (!title || !subjectId) return res.redirect(`/admin/tutorials.php?subject_id=${subjectId}`);
+
+  if (id) {
+    db.prepare('UPDATE tutorials SET title = ?, description = ? WHERE id = ? AND subject_id = ?').run(title, description || null, id, subjectId);
+  } else {
+    let slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tutorial';
+    let check = db.prepare('SELECT id FROM tutorials WHERE subject_id = ? AND slug = ?').get(subjectId, slug);
+    let counter = 1;
+    let baseSlug = slug;
+    while (check) {
+      counter++;
+      slug = baseSlug + '-' + counter;
+      check = db.prepare('SELECT id FROM tutorials WHERE subject_id = ? AND slug = ?').get(subjectId, slug);
+    }
+    const maxOrderRow = db.prepare('SELECT COALESCE(MAX(sort_order), 0) as m FROM tutorials WHERE subject_id = ?').get(subjectId);
+    const maxOrder = maxOrderRow ? maxOrderRow.m : 0;
+    db.prepare('INSERT INTO tutorials (subject_id, slug, title, description, sort_order) VALUES (?, ?, ?, ?, ?)').run(subjectId, slug, title, description || null, maxOrder + 10);
+  }
+
+  res.redirect(`/admin/tutorials.php?subject_id=${subjectId}`);
+});
+
+app.post('/admin/tutorial_delete.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const id = parseInt(req.body.id, 10);
+  const subjectId = parseInt(req.body.subject_id, 10);
+
+  if (id) {
+    db.prepare('DELETE FROM tutorials WHERE id = ?').run(id);
+  }
+
+  res.redirect(`/admin/tutorials.php?subject_id=${subjectId}`);
 });
 
 // Serve static frontend files

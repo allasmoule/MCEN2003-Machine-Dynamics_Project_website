@@ -30,7 +30,8 @@ admin_page_start('Subjects', 'subjects');
       <td><?= h($s['institution'] ?? '') ?></td>
       <td><?= (int)$s['tutorial_count'] ?></td>
       <td class="row-actions">
-        <a href="tutorials.php?subject_id=<?= (int)$s['id'] ?>">Tutorials</a>
+        <a href="tutorial_form.php?subject_id=<?= (int)$s['id'] ?>" class="btn btn-primary" style="padding:4px 10px; font-size:12px; border-radius:4px; margin-right:6px; color:#fff; text-decoration:none;">+ Add Tutorial</a>
+        <a href="tutorials.php?subject_id=<?= (int)$s['id'] ?>">Tutorials (<?= (int)$s['tutorial_count'] ?>)</a>
         <a href="subject_form.php?id=<?= (int)$s['id'] ?>">Edit</a>
         <form method="post" action="subject_delete.php" onsubmit="return confirm('Delete <?= h($s['name']) ?> and all its tutorials, questions and videos? This cannot be undone.');">
           <input type="hidden" name="id" value="<?= (int)$s['id'] ?>">

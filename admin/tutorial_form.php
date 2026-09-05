@@ -61,6 +61,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 admin_page_start($t ? 'Edit Tutorial' : 'New Tutorial', 'subjects', 'tutorials.php?subject_id=' . $subjectId, 'Back to ' . $subject['name']);
 ?>
+<?php if (isset($_GET['created_subject'])): ?>
+  <div class="ok-msg" style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; padding:12px 16px; border-radius:8px; margin-bottom:18px; font-weight:600;">
+    🎉 Subject created successfully! Now create your first tutorial for <strong><?= h($subject['name']) ?></strong> below.
+  </div>
+<?php endif; ?>
 <form method="post">
   <div class="card">
     <?php if ($error): ?><div class="err"><?= h($error) ?></div><?php endif; ?>

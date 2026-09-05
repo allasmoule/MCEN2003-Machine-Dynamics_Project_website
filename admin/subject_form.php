@@ -48,6 +48,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $maxOrder = (int)$pdo->query('SELECT COALESCE(MAX(sort_order),0) FROM subjects')->fetchColumn();
             $stmt = $pdo->prepare('INSERT INTO subjects (slug, name, institution, description, sort_order) VALUES (?,?,?,?,?)');
             $stmt->execute([$slug, $name, $institution ?: null, $description ?: null, $maxOrder + 10]);
+            $newId = (int)$pdo->lastInsertId();
+            header('Location: tutorial_form.php?subject_id=' . $newId . '&created_subject=1');
+            exit;
         }
         header('Location: subjects.php');
         exit;
