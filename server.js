@@ -1173,11 +1173,16 @@ app.get('/admin/question_form.php', (req, res) => {
     </div>
   `).join('');
 
+  const quickUnits = ['m/s', 'km/h', 'm/s²', 'rad/s', 'rad/s²', 'rpm', 'Hz', 'N', 'kN', 'N·m', 'kg', 'm', 'mm', 's', 'kPa', 'J', 'W'];
+  const unitChipsHtml = quickUnits.map(u => `
+    <button type="button" class="chip" onclick="applyQuickUnit('${u}')" style="background:#F1F5F9; border:1px solid #CBD5E1; color:#0F172A; padding:3px 8px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; font-family:monospace;">${u}</button>
+  `).join('');
+
   const partRowsHtml = parts.map(p => `
     <div class="rep-row" style="display:flex; gap:10px; margin-bottom:10px;">
       <input type="text" name="part_label[]" placeholder="(a) Velocity at t = 8 s" value="${escapeHtml(p.label || '')}" style="flex:2; padding:8px; border:1px solid #CBD5E1; border-radius:6px;">
       <input type="text" name="part_value[]" placeholder="Answer value (e.g. 10)" value="${escapeHtml(p.value !== undefined ? p.value : '')}" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;">
-      <input type="text" name="part_unit[]" placeholder="Unit (e.g. m/s)" value="${escapeHtml(p.unit || '')}" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;">
+      <input type="text" name="part_unit[]" list="unitSuggestions" placeholder="Unit (e.g. m/s)" value="${escapeHtml(p.unit || '')}" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;">
       <button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>
     </div>
   `).join('');
@@ -1191,6 +1196,36 @@ app.get('/admin/question_form.php', (req, res) => {
   `).join('');
 
   const bodyHtml = `
+    <datalist id="unitSuggestions">
+      <option value="m/s">Velocity (m/s)</option>
+      <option value="km/h">Speed (km/h)</option>
+      <option value="m/s²">Acceleration (m/s²)</option>
+      <option value="rad/s">Angular Velocity (rad/s)</option>
+      <option value="rad/s²">Angular Acceleration (rad/s²)</option>
+      <option value="rpm">Rotational Speed (rpm)</option>
+      <option value="Hz">Frequency (Hz)</option>
+      <option value="N">Force (N)</option>
+      <option value="kN">Force (kN)</option>
+      <option value="N·m">Torque/Moment (N·m)</option>
+      <option value="kg">Mass (kg)</option>
+      <option value="g">Mass (g)</option>
+      <option value="m">Length (m)</option>
+      <option value="mm">Length (mm)</option>
+      <option value="cm">Length (cm)</option>
+      <option value="km">Length (km)</option>
+      <option value="s">Time (s)</option>
+      <option value="ms">Time (ms)</option>
+      <option value="Pa">Pressure (Pa)</option>
+      <option value="kPa">Pressure (kPa)</option>
+      <option value="MPa">Pressure (MPa)</option>
+      <option value="J">Energy/Work (J)</option>
+      <option value="kJ">Energy (kJ)</option>
+      <option value="W">Power (W)</option>
+      <option value="kW">Power (kW)</option>
+      <option value="deg">Angle (deg)</option>
+      <option value="rad">Angle (rad)</option>
+    </datalist>
+
     <div style="margin-bottom:12px;"><a href="/admin/questions.php?tutorial_id=${tutorialId}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to ${tutorial.title} questions</a></div>
     ${isCreatedTut ? '<div class="ok-msg" style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; padding:12px 16px; border-radius:8px; margin-bottom:18px; font-weight:600;">🎉 Tutorial created successfully! Now add your first question for <strong>' + tutorial.title + '</strong> below.</div>' : ''}
     <form method="post" action="/admin/question_form.php?tutorial_id=${tutorialId}${id ? '&id=' + id : ''}" style="max-width:800px;" id="qForm">
@@ -1247,7 +1282,12 @@ app.get('/admin/question_form.php', (req, res) => {
       </div>
 
       <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:20px; margin-bottom:16px;">
-        <h2 style="font-size:16px; margin:0 0 12px 0;">Answer Parts (Interactive Check)</h2>
+        <h2 style="font-size:16px; margin:0 0 8px 0;">Answer Parts (Interactive Check)</h2>
+        <p class="hint" style="font-size:13px; color:#64748B; margin:0 0 12px 0;">Each part is what the student types an answer for and gets checked against.</p>
+        <div class="unit-chips" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; align-items:center;">
+          <span style="font-size:12px; font-weight:700; color:#475569; margin-right:4px;">Quick Units:</span>
+          ${unitChipsHtml}
+        </div>
         <div id="partRows">${partRowsHtml}</div>
         <button type="button" onclick="addPart()" style="background:none; border:1.5px dashed #CBD5E1; color:#102A56; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px;">+ Add Answer Part</button>
       </div>
@@ -1269,6 +1309,20 @@ app.get('/admin/question_form.php', (req, res) => {
       </div>
     </form>
     <script>
+    function applyQuickUnit(unit) {
+      var inputs = document.querySelectorAll('input[name="part_unit[]"]');
+      if (inputs.length > 0) {
+        var targetInput = inputs[inputs.length - 1];
+        for (var i = inputs.length - 1; i >= 0; i--) {
+          if (document.activeElement === inputs[i]) {
+            targetInput = inputs[i];
+            break;
+          }
+        }
+        targetInput.value = unit;
+        targetInput.focus();
+      }
+    }
     function addGiven() {
       var div = document.createElement('div');
       div.className = 'rep-row';
@@ -1294,7 +1348,7 @@ app.get('/admin/question_form.php', (req, res) => {
       var div = document.createElement('div');
       div.className = 'rep-row';
       div.style.cssText = 'display:flex; gap:10px; margin-bottom:10px;';
-      div.innerHTML = '<input type="text" name="part_label[]" placeholder="Label" style="flex:2; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><input type="text" name="part_value[]" placeholder="Value" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><input type="text" name="part_unit[]" placeholder="Unit" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>';
+      div.innerHTML = '<input type="text" name="part_label[]" placeholder="Label" style="flex:2; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><input type="text" name="part_value[]" placeholder="Value" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><input type="text" name="part_unit[]" list="unitSuggestions" placeholder="Unit (e.g. m/s)" style="flex:1; padding:8px; border:1px solid #CBD5E1; border-radius:6px;"><button type="button" onclick="this.parentElement.remove()" style="background:none; border:1px solid #FCA5A5; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer;">Remove</button>';
       document.getElementById('partRows').appendChild(div);
     }
     function addStep() {

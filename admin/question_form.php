@@ -182,15 +182,51 @@ admin_page_start($q ? 'Edit ' . $q['code'] : 'New Question', 'subjects', 'questi
     <div class="field" style="margin-top:16px"><label>Tip</label><textarea name="hint_tip" rows="2"><?= h($hint['tip'] ?? '') ?></textarea></div>
   </div>
 
+  <datalist id="unitSuggestions">
+    <option value="m/s">Velocity (m/s)</option>
+    <option value="km/h">Speed (km/h)</option>
+    <option value="m/s²">Acceleration (m/s²)</option>
+    <option value="rad/s">Angular Velocity (rad/s)</option>
+    <option value="rad/s²">Angular Acceleration (rad/s²)</option>
+    <option value="rpm">Rotational Speed (rpm)</option>
+    <option value="Hz">Frequency (Hz)</option>
+    <option value="N">Force (N)</option>
+    <option value="kN">Force (kN)</option>
+    <option value="N·m">Torque/Moment (N·m)</option>
+    <option value="kg">Mass (kg)</option>
+    <option value="g">Mass (g)</option>
+    <option value="m">Length (m)</option>
+    <option value="mm">Length (mm)</option>
+    <option value="cm">Length (cm)</option>
+    <option value="km">Length (km)</option>
+    <option value="s">Time (s)</option>
+    <option value="ms">Time (ms)</option>
+    <option value="Pa">Pressure (Pa)</option>
+    <option value="kPa">Pressure (kPa)</option>
+    <option value="MPa">Pressure (MPa)</option>
+    <option value="J">Energy/Work (J)</option>
+    <option value="kJ">Energy (kJ)</option>
+    <option value="W">Power (W)</option>
+    <option value="kW">Power (kW)</option>
+    <option value="deg">Angle (deg)</option>
+    <option value="rad">Angle (rad)</option>
+  </datalist>
+
   <div class="card">
     <h2>Answer Parts</h2>
-    <p class="hint" style="margin:-8px 0 12px 0">Each part is what the student types an answer for and gets checked against.</p>
+    <p class="hint" style="margin:-8px 0 8px 0">Each part is what the student types an answer for and gets checked against.</p>
+    <div class="unit-chips" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; align-items:center;">
+      <span style="font-size:12px; font-weight:700; color:#475569; margin-right:4px;">Quick Units:</span>
+      <?php foreach (['m/s', 'km/h', 'm/s²', 'rad/s', 'rad/s²', 'rpm', 'Hz', 'N', 'kN', 'N·m', 'kg', 'm', 'mm', 's', 'kPa', 'J', 'W'] as $u): ?>
+        <button type="button" class="chip" onclick="applyQuickUnit('<?= $u ?>')" style="background:#F1F5F9; border:1px solid #CBD5E1; color:#0F172A; padding:3px 8px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; font-family:monospace;"><?= $u ?></button>
+      <?php endforeach; ?>
+    </div>
     <div id="partRows">
       <?php foreach ($parts as $p): ?>
       <div class="rep-row">
         <input type="text" name="part_label[]" placeholder="(a) Velocity at t = 8 s" value="<?= h($p['label'] ?? '') ?>">
         <input type="text" name="part_value[]" placeholder="Correct value, e.g. 10" value="<?= h($p['value'] ?? '') ?>">
-        <input type="text" name="part_unit[]" placeholder="Unit, e.g. m/s" value="<?= h($p['unit'] ?? '') ?>">
+        <input type="text" name="part_unit[]" list="unitSuggestions" placeholder="Unit, e.g. m/s" value="<?= h($p['unit'] ?? '') ?>">
         <button type="button" class="rm-btn" onclick="this.parentElement.remove()">Remove</button>
       </div>
       <?php endforeach; ?>
@@ -231,6 +267,20 @@ admin_page_start($q ? 'Edit ' . $q['code'] : 'New Question', 'subjects', 'questi
   </div>
 </form>
 <script>
+function applyQuickUnit(unit) {
+  var inputs = document.querySelectorAll('input[name="part_unit[]"]');
+  if (inputs.length > 0) {
+    var targetInput = inputs[inputs.length - 1];
+    for (var i = inputs.length - 1; i >= 0; i--) {
+      if (document.activeElement === inputs[i]) {
+        targetInput = inputs[i];
+        break;
+      }
+    }
+    targetInput.value = unit;
+    targetInput.focus();
+  }
+}
 function addRow(containerId, html) {
   var div = document.createElement('div');
   div.innerHTML = html;
@@ -246,7 +296,7 @@ function addPlan() {
   addRow('planRows', '<div class="rep-row"><textarea name="plan_items[]" rows="2"></textarea><button type="button" class="rm-btn" onclick="this.parentElement.remove()">Remove</button></div>');
 }
 function addPart() {
-  addRow('partRows', '<div class="rep-row"><input type="text" name="part_label[]" placeholder="Label"><input type="text" name="part_value[]" placeholder="Value"><input type="text" name="part_unit[]" placeholder="Unit"><button type="button" class="rm-btn" onclick="this.parentElement.remove()">Remove</button></div>');
+  addRow('partRows', '<div class="rep-row"><input type="text" name="part_label[]" placeholder="Label"><input type="text" name="part_value[]" placeholder="Value"><input type="text" name="part_unit[]" list="unitSuggestions" placeholder="Unit, e.g. m/s"><button type="button" class="rm-btn" onclick="this.parentElement.remove()">Remove</button></div>');
 }
 function addStep() {
   addRow('stepRows', '<div class="rep-row" style="flex-direction:column"><input type="text" name="step_title[]" placeholder="Step title"><textarea name="step_desc[]" rows="2" placeholder="Step working"></textarea><button type="button" class="rm-btn" onclick="this.parentElement.remove()" style="align-self:flex-start">Remove step</button></div>');
