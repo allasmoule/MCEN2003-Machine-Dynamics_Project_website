@@ -12,10 +12,8 @@ define('DB_PASS', 'your_cpanel_db_password');
 
 // Fixed admin sign-in — logging into the regular student login form with this
 // exact email + password goes to the admin panel instead of the tutorial.
-// Generate the hash with:
-//   php -r "echo password_hash('your-new-password', PASSWORD_DEFAULT), PHP_EOL;"
-define('ADMIN_EMAIL', 'your-admin-email@example.com');
-define('ADMIN_PASSWORD_HASH', '$2y$10$replace.with.a.real.hash.generated.above');
+define('ADMIN_EMAIL', 'Raju.ahamedruet07@gmail.com');
+define('ADMIN_PASSWORD_HASH', '$2y$10$TKh8H1.PfQx37YgCzwiKb.KjNyWgaHb9cbcoQgdIVFlYg7B77UdFm');
 
 // Random long string used to sign session cookies. Change this to your own random value.
-define('APP_SECRET', 'change-this-to-a-long-random-string');
+define('APP_SECRET', 'mcen2003-secret-key-123456789');

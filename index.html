@@ -39,8 +39,8 @@
         <nav class="p-nav">
           <a href="index.html" class="p-nav-link active">Home</a>
           <a href="#experience" class="p-nav-link">Experience</a>
-          <a href="#work" class="p-nav-link">Work With Me</a>
-          <a href="#contact" class="p-nav-link">Contact</a>
+          <a href="contact.html?type=work" class="p-nav-link">Work With Me</a>
+          <a href="contact.html" class="p-nav-link">Contact</a>
         </nav>
       </div>
     </header>
@@ -56,14 +56,14 @@
             years of experience across teaching, research and industry — specialising in vibration power harvesting,
             ocean wave energy converters and machine dynamics.</p>
           <div class="p-hero-btns" id="work">
-            <a href="#contact" class="p-btn p-btn-primary">
+            <a href="contact.html?type=work" class="p-btn p-btn-primary" id="btnWorkWithMe">
               <svg class="p-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
               Work With Me
             </a>
-            <a href="#contact" class="p-btn p-btn-outline">
+            <a href="contact.html" class="p-btn p-btn-outline" id="btnContactMe">
               <svg class="p-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect width="20" height="16" x="2" y="4" rx="2" />
                 <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
@@ -377,14 +377,10 @@
               </ul>
               <p class="p-exp-note">&#9733; Key achievement: gained practical knowledge and skills for improving
                 industrial production.</p>
-            </div>
-          </div>
-
-        </div>
-      </section>
+      </div>
     </main>
 
-    <footer class="p-footer" id="contact">
+    <footer class="p-footer">
       <div class="p-footer-in">
         <p class="p-copy">&copy; 2025 Md. Roju Ahomed. All Rights Reserved.</p>
         <div class="p-socials">
@@ -433,6 +429,34 @@
       }).catch(function () {
         document.getElementById('subjGrid').innerHTML = '<div class="p-subj-card" style="color:#94A3B8;font-size:14px">Could not load subjects.</div>';
       });
+
+      // Scroll reveal animation for Experience section
+      (function () {
+        var expItems = document.querySelectorAll('.p-exp-item');
+        if (!expItems.length) return;
+
+        if ('IntersectionObserver' in window) {
+          var observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('p-exp-visible');
+              }
+            });
+          }, {
+            threshold: 0.15,
+            rootMargin: '0px 0px -40px 0px'
+          });
+
+          expItems.forEach(function (item, idx) {
+            item.style.transitionDelay = (idx * 0.08) + 's';
+            observer.observe(item);
+          });
+        } else {
+          expItems.forEach(function (item) {
+            item.classList.add('p-exp-visible');
+          });
+        }
+      })();
     })();
   </script>
 

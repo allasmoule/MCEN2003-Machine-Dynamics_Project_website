@@ -1,0 +1,27 @@
+{
+  "name": "talha_vai",
+  "version": "1.0.0",
+  "description": "MCEN2003 Machine Dynamics — Interactive Tutorial Workbook for Kinematics.",
+  "main": "workbook.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/allasmoule/MCEN2003-Machine-Dynamics_Project_website.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/allasmoule/MCEN2003-Machine-Dynamics_Project_website/issues"
+  },
+  "homepage": "https://github.com/allasmoule/MCEN2003-Machine-Dynamics_Project_website#readme",
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1"
+  }
+}

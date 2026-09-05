@@ -1999,7 +1999,8 @@ function renderVideos(videos){
     /* offline / API unreachable — silently fall back to QUESTIONS_FALLBACK */
   }
   try{
-    const fsRes = await fetch("api/formula_sheet.php");
+    const fsUrl = "api/formula_sheet.php" + (resolvedTutorialId ? "?tutorial="+encodeURIComponent(resolvedTutorialId) : "");
+    const fsRes = await fetch(fsUrl);
     if(fsRes.ok){
       const fsData = await fsRes.json();
       renderFormulaSheet(fsData.formula_sheet);

@@ -3,3 +3,6 @@ Thumbs.db
 *.log
 config.php
 .claude/
+node_modules/
+app.db
+
