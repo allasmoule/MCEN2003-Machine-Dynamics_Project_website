@@ -726,12 +726,25 @@ function fmt(n){
 /* ============================================================
    STATE
    ============================================================ */
-const KEY="mcen2003-t1-v1";
+let KEY="mcen2003-t1-v1";
 let active=0, store={};
-try{ const a=+localStorage.getItem("mcen-active"); if(a>=0 && a<5) active=a; }catch(e){}
-try{ store=JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ store={}; }
+
+function initTutorialStorage(tutId) {
+  if (tutId) {
+    KEY = "mcen2003-tut-" + tutId;
+  }
+  try { store = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e) { store = {}; }
+  try {
+    const a = +localStorage.getItem("mcen-active-" + (tutId || "1"));
+    if (a >= 0 && a < (QUESTIONS.length || 1)) active = a;
+    else active = 0;
+  } catch(e) { active = 0; }
+}
+
+try { initTutorialStorage(new URLSearchParams(location.search).get("tutorial") || ""); } catch(e) {}
 
 function qs(q){
+  if(!q || !q.id) return {pages:[{n:"",s:[]}], ans:[], status:[], tried:[], first:[], steps:0, page:0};
   if(!store[q.id]) store[q.id]={};
   const s=store[q.id];
   ["ans","status","tried","first"].forEach(k=>{ if(!Array.isArray(s[k])) s[k]=[]; });
@@ -745,14 +758,29 @@ function qs(q){
   return s;
 }
 function qctx(){
-  const base=QUESTIONS[active], s=qs(base);
+  if(!QUESTIONS || !QUESTIONS.length){
+    const emptyQ = {id:'', code:'—', topic:'', title:'', statement:'', given:[], hint:{approach:'',formulas:[],plan:[],tip:''}, parts:[], steps:[]};
+    const emptySt = {pages:[{n:'',s:[]}], ans:[], status:[], tried:[], first:[], steps:0, page:0};
+    return {base:emptyQ, s:emptySt, q:emptyQ, st:emptySt};
+  }
+  const base=QUESTIONS[active] || QUESTIONS[0], s=qs(base);
   return {base:base, s:s, q:base, st:s};
 }
-function curPage(){ const s=qs(QUESTIONS[active]); return s.pages[s.page]; }
-function triedCount(q,st){ return q.parts.filter((p,i)=>st.tried[i]).length; }
-function isUnlocked(q,st){ return triedCount(q,st)===q.parts.length; }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(store)); localStorage.setItem("mcen-active", String(active)); }catch(e){} }
-function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function curPage(){
+  if(!QUESTIONS || !QUESTIONS.length) return {n:'', s:[]};
+  const s=qs(QUESTIONS[active] || QUESTIONS[0]);
+  return (s.pages && s.pages[s.page]) || {n:'', s:[]};
+}
+function triedCount(q,st){ return (q.parts || []).filter((p,i)=>st.tried[i]).length; }
+function isUnlocked(q,st){ return (q.parts || []).length > 0 && triedCount(q,st)===(q.parts || []).length; }
+function save(){ 
+  try{ 
+    localStorage.setItem(KEY, JSON.stringify(store)); 
+    const tutId = new URLSearchParams(location.search).get("tutorial") || "1";
+    localStorage.setItem("mcen-active-" + tutId, String(active)); 
+  }catch(e){} 
+}
+function esc(s){return String(s || '').replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
 /* ============================================================
    RAIL
@@ -767,21 +795,33 @@ function qState(q){
   return "partial";
 }
 function buildRail(){
-  document.getElementById("railCount").textContent=QUESTIONS.length+" questions";
-  railList.innerHTML="";
+  const countEl = document.getElementById("railCount");
+  if(countEl) countEl.textContent = QUESTIONS.length + " questions";
+  if(!railList) return;
+  railList.innerHTML = "";
+  if(!QUESTIONS || !QUESTIONS.length){
+    railList.innerHTML = '<li style="padding:14px 10px; font-size:12.5px; color:#64748B; text-align:center;">No questions in this tutorial yet.</li>';
+    const meterFill = document.getElementById("meterFill");
+    if(meterFill) meterFill.style.width = "0%";
+    const meterNum = document.getElementById("meterNum");
+    if(meterNum) meterNum.textContent = "0 / 0";
+    return;
+  }
   QUESTIONS.forEach((q,i)=>{
     const li=document.createElement("li");
     const b=document.createElement("button");
     b.className="rail-item";
     b.setAttribute("aria-current", i===active?"true":"false");
     const st=qState(q);
-    b.innerHTML='<span class="rail-num">'+q.code+'</span><span class="rail-topic">'+esc(q.topic)+'</span><span class="dot '+(st==="idle"?"":st)+'"></span>';
+    b.innerHTML='<span class="rail-num">'+esc(q.code||'')+'</span><span class="rail-topic">'+esc(q.topic||'')+'</span><span class="dot '+(st==="idle"?"":st)+'"></span>';
     b.addEventListener("click",()=>{ commitPad(); active=i; render(); window.scrollTo({top:0,behavior:"smooth"}); });
     li.appendChild(b); railList.appendChild(li);
   });
   const done=QUESTIONS.filter(q=>qState(q)==="correct").length;
-  document.getElementById("meterFill").style.width=(done/QUESTIONS.length*100)+"%";
-  document.getElementById("meterNum").textContent=done+" / "+QUESTIONS.length;
+  const meterFill = document.getElementById("meterFill");
+  if(meterFill) meterFill.style.width=(done/QUESTIONS.length*100)+"%";
+  const meterNum = document.getElementById("meterNum");
+  if(meterNum) meterNum.textContent=done+" / "+QUESTIONS.length;
 }
 
 /* ============================================================
@@ -793,11 +833,25 @@ const BOOK='<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 
 const BULB='<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a4.3 4.3 0 0 0-2.6 7.7c.5.4.8 1 .8 1.6v.4h3.6v-.4c0-.6.3-1.2.8-1.6A4.3 4.3 0 0 0 8 1.4Z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M6.4 13h3.2M6.9 14.6h2.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
 
 function render(){
+  buildRail();
+  if(!card) return;
+  if(!QUESTIONS || !QUESTIONS.length){
+    card.innerHTML = `
+      <div style="background:#fff; border:1px solid #E2E8F0; border-radius:12px; padding:48px 24px; text-align:center; color:#64748B;">
+        <svg style="width:48px; height:48px; color:#94A3B8; margin-bottom:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        <h3 style="margin:0 0 8px 0; color:#0F172A; font-size:18px; font-weight:700;">No Questions Added Yet</h3>
+        <p style="font-size:14px; margin:0 0 16px 0; color:#64748B;">This tutorial does not have any questions added yet. You can add questions from the Admin Panel.</p>
+      </div>
+    `;
+    return;
+  }
+  if(active >= QUESTIONS.length || active < 0) active = 0;
   const C=qctx(), base=C.base, s=C.s, q=C.q, st=C.st;
-  const traps = TRAPS[base.id] || null;
+  if(!q) return;
+  const traps = (TRAPS && TRAPS[base.id]) || null;
   const unlocked=isUnlocked(q,st);
   let h="";
-  h+='<div class="q-head"><span class="q-index">'+q.code+'</span><span class="label q-topic">'+esc(q.topic)+'</span>';
+  h+='<div class="q-head"><span class="q-index">'+esc(q.code||'')+'</span><span class="label q-topic">'+esc(q.topic||'')+'</span>';
   h+='</div>';
   h+='<h2 class="q-title">'+esc(q.title)+'</h2>';
   esc(q.statement).split("\n\n").forEach(par=>{ h+='<p class="q-statement">'+par+'</p>'; });
@@ -1984,7 +2038,7 @@ function renderVideos(videos){
     const res = await fetch(qUrl);
     if(res.ok){
       const data = await res.json();
-      if(Array.isArray(data.questions) && data.questions.length){
+      if(Array.isArray(data.questions)){
         QUESTIONS = data.questions;
       }
       if(data.tutorial){
@@ -1996,7 +2050,11 @@ function renderVideos(videos){
       }
     }
   }catch(e){
-    /* offline / API unreachable — silently fall back to QUESTIONS_FALLBACK */
+    /* offline / API unreachable — fall back */
+  }
+
+  if(resolvedTutorialId){
+    initTutorialStorage(resolvedTutorialId);
   }
   try{
     const fsUrl = "api/formula_sheet.php" + (resolvedTutorialId ? "?tutorial="+encodeURIComponent(resolvedTutorialId) : "");
