@@ -1903,6 +1903,143 @@ app.post('/admin/question_delete.php', (req, res) => {
   res.redirect(`/admin/questions.php?tutorial_id=${tutorialId}`);
 });
 
+// Videos Management Routes
+app.get('/admin/videos.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const tutorial = db.prepare('SELECT t.*, s.name AS subject_name FROM tutorials t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?').get(tutorialId);
+  if (!tutorial) return res.redirect('/admin/subjects.php');
+
+  const videos = db.prepare('SELECT * FROM videos WHERE tutorial_id = ? ORDER BY sort_order ASC, id ASC').all(tutorialId);
+
+  let tableRows = videos.map(v => `
+    <tr style="border-bottom:1px solid #F1F5F9;">
+      <td style="padding:14px 16px; font-weight:600; color:#0F172A;">${v.title}</td>
+      <td style="padding:14px 16px;"><a href="${v.url}" target="_blank" rel="noopener" style="color:#2563EB; font-weight:500; text-decoration:none;">${v.url} &rarr;</a></td>
+      <td style="padding:14px 16px; color:#64748B; font-size:13px;">${v.description || '—'}</td>
+      <td class="row-actions" style="padding:14px 16px; text-align:right;">
+        <a href="/admin/video_form.php?tutorial_id=${tutorialId}&id=${v.id}" style="color:#475569; font-weight:600; text-decoration:none; margin-right:12px;">Edit</a>
+        <form method="post" action="/admin/video_delete.php" style="display:inline; margin:0;" onsubmit="return confirm('Delete this video?');">
+          <input type="hidden" name="id" value="${v.id}">
+          <input type="hidden" name="tutorial_id" value="${tutorialId}">
+          <button type="submit" style="color:#DC2626; background:transparent; border:none; cursor:pointer; font-weight:600; font-size:13px; padding:0;">Delete</button>
+        </form>
+      </td>
+    </tr>
+  `).join('');
+
+  const bodyHtml = `
+    <div style="margin-bottom:12px;"><a href="/admin/tutorials.php?subject_id=${tutorial.subject_id}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to ${tutorial.subject_name} tutorials</a></div>
+    <div class="toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div>
+        <h2 style="margin:0; font-size:18px; color:#1E293B; font-weight:700;">Videos for ${tutorial.title}</h2>
+        <span class="meta" style="color:#64748B; font-size:13px;">${videos.length} video${videos.length === 1 ? '' : 's'} attached</span>
+      </div>
+      <a href="/admin/video_form.php?tutorial_id=${tutorialId}" class="btn btn-primary" style="background:#D97706; color:#fff; padding:9px 18px; border-radius:8px; text-decoration:none; font-weight:600; font-size:13.5px;">+ New Video</a>
+    </div>
+    ${videos.length === 0 ? '<div class="empty" style="background:#fff; padding:40px; text-align:center; border-radius:12px; border:1px solid #E2E8F0; color:#64748B;">No videos added yet — paste a YouTube link to add one.</div>' : `
+      <table style="width:100%; border-collapse:collapse; background:#fff; border:1px solid #E2E8F0; border-radius:10px; overflow:hidden;">
+        <thead>
+          <tr style="background:#F8FAFC; border-bottom:2px solid #E2E8F0; text-align:left; font-size:12.5px; color:#475569;">
+            <th style="padding:12px 16px;">Title</th>
+            <th style="padding:12px 16px;">YouTube / Video Link</th>
+            <th style="padding:12px 16px;">Description</th>
+            <th style="padding:12px 16px; text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+    `}
+  `;
+
+  res.send(renderAdminLayout('Videos', 'subjects', bodyHtml));
+});
+
+app.get('/admin/video_form.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const tutorial = db.prepare('SELECT t.*, s.name AS subject_name FROM tutorials t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?').get(tutorialId);
+  if (!tutorial) return res.redirect('/admin/subjects.php');
+
+  const id = parseInt(req.query.id, 10) || 0;
+  let v = null;
+  if (id) {
+    v = db.prepare('SELECT * FROM videos WHERE id = ? AND tutorial_id = ?').get(id, tutorialId);
+  }
+
+  const bodyHtml = `
+    <div style="margin-bottom:12px;"><a href="/admin/videos.php?tutorial_id=${tutorialId}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to videos</a></div>
+    <form method="post" action="/admin/video_form.php?tutorial_id=${tutorialId}${id ? '&id=' + id : ''}" style="max-width:640px;">
+      <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:12px; padding:24px; margin-bottom:20px;">
+        <div class="field" style="margin-bottom:16px;">
+          <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">Video Title *</label>
+          <input type="text" name="title" value="${v ? (v.title || '') : ''}" placeholder="e.g. Worked example: T1.1 walkthrough video" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div class="field" style="margin-bottom:16px;">
+          <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">YouTube / Video Link *</label>
+          <input type="url" name="url" value="${v ? (v.url || '') : ''}" placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..." required style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box;">
+          <span style="display:block; font-size:12px; color:#64748B; margin-top:4px;">Paste any YouTube video link (e.g. https://www.youtube.com/watch?v=VIDEO_ID). Students can play it directly in the workbook.</span>
+        </div>
+        <div class="field" style="margin-bottom:16px;">
+          <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">Description <span style="font-weight:400; color:#64748B;">(optional)</span></label>
+          <textarea name="description" rows="3" placeholder="Brief summary of what this video explains..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box; line-height:1.5;">${v ? (v.description || '') : ''}</textarea>
+        </div>
+      </div>
+      <div class="save-bar" style="display:flex; gap:12px;">
+        <a href="/admin/videos.php?tutorial_id=${tutorialId}" class="btn btn-outline" style="padding:10px 20px; border-radius:8px; border:1px solid #CBD5E1; text-decoration:none; color:#334155; font-weight:600;">Cancel</a>
+        <button type="submit" class="btn btn-primary" style="background:#D97706; color:#fff; padding:10px 24px; border-radius:8px; border:none; font-weight:700; cursor:pointer;">${v ? 'Save changes' : 'Add Video'}</button>
+      </div>
+    </form>
+  `;
+
+  res.send(renderAdminLayout(v ? 'Edit Video' : 'New Video', 'subjects', bodyHtml));
+});
+
+app.post('/admin/video_form.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const id = parseInt(req.query.id, 10) || 0;
+  const title = (req.body.title || '').trim();
+  const url = (req.body.url || '').trim();
+  const description = (req.body.description || '').trim();
+
+  if (!title || !url || !tutorialId) {
+    return res.redirect(`/admin/videos.php?tutorial_id=${tutorialId}`);
+  }
+
+  if (id) {
+    db.prepare('UPDATE videos SET title = ?, url = ?, description = ? WHERE id = ? AND tutorial_id = ?').run(title, url, description || null, id, tutorialId);
+  } else {
+    const maxOrderRow = db.prepare('SELECT COALESCE(MAX(sort_order), 0) as m FROM videos WHERE tutorial_id = ?').get(tutorialId);
+    const maxOrder = maxOrderRow ? maxOrderRow.m : 0;
+    db.prepare('INSERT INTO videos (tutorial_id, title, url, description, sort_order) VALUES (?, ?, ?, ?, ?)').run(tutorialId, title, url, description || null, maxOrder + 10);
+  }
+
+  res.redirect(`/admin/videos.php?tutorial_id=${tutorialId}`);
+});
+
+app.post('/admin/video_delete.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const id = parseInt(req.body.id, 10);
+  const tutorialId = parseInt(req.body.tutorial_id, 10);
+
+  if (id) {
+    db.prepare('DELETE FROM videos WHERE id = ?').run(id);
+  }
+
+  res.redirect(`/admin/videos.php?tutorial_id=${tutorialId}`);
+});
+
 // PDF Documents Management Routes
 app.get('/admin/pdfs.php', (req, res) => {
   const user = getSessionUser(req);
