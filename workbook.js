@@ -1365,12 +1365,15 @@ function paintVars(){
     : '<span class="var-chip">Define values in the working pad and use them here</span>';
 }
 const fsPanel=document.getElementById("fsPanel"), fsToggle=document.getElementById("fsToggle");
-fsToggle.addEventListener("click",()=>{
-  const open=fsPanel.hidden;
-  fsPanel.hidden=!open;
-  fsToggle.setAttribute("aria-pressed",open?"true":"false");
-  fsToggle.classList.toggle("active",open);
-});
+if(fsToggle && fsPanel){
+  fsToggle.addEventListener("click",()=>{
+    const open=fsPanel.hidden;
+    fsPanel.hidden=!open;
+    fsToggle.setAttribute("aria-pressed",open?"true":"false");
+    fsToggle.classList.toggle("active",open);
+    if(open) setTimeout(()=>{ fsPanel.scrollIntoView({behavior:"smooth", block:"nearest"}); }, 50);
+  });
+}
 const videosPanel=document.getElementById("videosPanel"), videosToggle=document.getElementById("videosToggle");
 if(videosToggle && videosPanel){
   videosToggle.addEventListener("click",()=>{
@@ -1378,6 +1381,7 @@ if(videosToggle && videosPanel){
     videosPanel.hidden=!open;
     videosToggle.setAttribute("aria-pressed",open?"true":"false");
     videosToggle.classList.toggle("active",open);
+    if(open) setTimeout(()=>{ videosPanel.scrollIntoView({behavior:"smooth", block:"nearest"}); }, 50);
   });
 }
 const pdfsPanel=document.getElementById("pdfsPanel"), pdfsToggle=document.getElementById("pdfsToggle");
@@ -1387,6 +1391,7 @@ if(pdfsToggle && pdfsPanel){
     pdfsPanel.hidden=!open;
     pdfsToggle.setAttribute("aria-pressed",open?"true":"false");
     pdfsToggle.classList.toggle("active",open);
+    if(open) setTimeout(()=>{ pdfsPanel.scrollIntoView({behavior:"smooth", block:"nearest"}); }, 50);
   });
 }
 const notesPanel=document.getElementById("notesPanel"), notesToggle=document.getElementById("notesToggle");
@@ -1396,6 +1401,7 @@ if(notesToggle && notesPanel){
     notesPanel.hidden=!open;
     notesToggle.setAttribute("aria-pressed",open?"true":"false");
     notesToggle.classList.toggle("active",open);
+    if(open) setTimeout(()=>{ notesPanel.scrollIntoView({behavior:"smooth", block:"nearest"}); }, 50);
   });
 }
 
@@ -2042,12 +2048,16 @@ function renderVideos(videos){
     return;
   }
   videosPanel.innerHTML =
-    '<div class="fsheet-top"><span class="label">Videos</span></div>' +
-    '<div class="video-list">' +
+    '<div class="fsheet-top"><span class="label">Tutorial Videos</span></div>' +
+    '<div class="video-list" style="padding:16px;">' +
     videos.map(v=>
-      '<div class="video-item">' + embedHtml(v.url) +
-      '<div class="video-item-title">'+esc(v.title)+'</div>' +
-      (v.description ? '<div class="video-item-desc">'+esc(v.description)+'</div>' : '') +
+      '<div class="video-item">' + 
+        embedHtml(v.url) +
+        '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">' +
+          '<div class="video-item-title">'+esc(v.title)+'</div>' +
+          '<a href="'+esc(v.url)+'" target="_blank" rel="noopener" style="font-size:12px; background:#EFF6FF; color:#2563EB; border:1px solid #BFDBFE; padding:4px 10px; border-radius:6px; font-weight:600; text-decoration:none; white-space:nowrap;">Watch on YouTube &rarr;</a>' +
+        '</div>' +
+        (v.description ? '<div class="video-item-desc" style="margin-top:6px;">'+esc(v.description)+'</div>' : '') +
       '</div>'
     ).join("") +
     '</div>';

@@ -2,10 +2,6 @@
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 
-if (!current_user()) {
-    json_response(['error' => 'Not authenticated'], 401);
-}
-
 $tutorialId = isset($_GET['tutorial']) ? (int)$_GET['tutorial'] : 0;
 if (!$tutorialId) {
     $tutorialId = (int)db()->query('SELECT id FROM tutorials ORDER BY id ASC LIMIT 1')->fetchColumn();
