@@ -690,6 +690,19 @@ textarea{resize:vertical;font-family:"IBM Plex Mono",monospace;font-size:12.5px}
 .subj-tile h3{font-size:15px;margin:0 0 4px 0;color:#0F172A}
 .subj-tile .subj-inst{font-size:12.5px;color:#102A56;font-weight:600;margin-bottom:8px}
 .subj-tile .subj-count{font-size:12px;color:#94A3B8}
+
+@media (max-width: 768px) {
+  .admin-shell { flex-direction: column; }
+  .admin-sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid #E2E8F0; }
+  .admin-brand { padding: 14px 16px; }
+  .admin-nav { flex-direction: row; overflow-x: auto; padding: 8px 12px; gap: 6px; -webkit-overflow-scrolling: touch; }
+  .admin-nav a { white-space: nowrap; padding: 8px 12px; font-size: 13px; }
+  .admin-logout { display: none; }
+  .admin-topbar { padding: 14px 16px; }
+  .admin-content { padding: 16px 16px 40px; }
+  .row { grid-template-columns: 1fr; }
+  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
 </style>
 </head>
 <body>

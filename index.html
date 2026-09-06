@@ -36,7 +36,12 @@
     <header class="p-header">
       <div class="p-header-in">
         <a href="index.html" class="p-brand">Prof. Md. Roju Ahomed</a>
-        <nav class="p-nav">
+        <button class="p-hamburger" id="pMobileToggle" aria-label="Open menu" aria-expanded="false">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <nav class="p-nav" id="pNav">
           <a href="index.html" class="p-nav-link active">Home</a>
           <a href="#experience" class="p-nav-link">Experience</a>
           <a href="contact.html?type=work" class="p-nav-link">Work With Me</a>
@@ -44,6 +49,7 @@
         </nav>
       </div>
     </header>
+    <div class="p-nav-overlay" id="pNavOverlay"></div>
 
     <main class="p-main">
       <!-- HERO SECTION -->
@@ -466,6 +472,38 @@
         } else {
           expItems.forEach(function (item) {
             item.classList.add('p-exp-visible');
+          });
+        }
+      })();
+
+      // Mobile Navigation Drawer Script
+      (function() {
+        var toggle = document.getElementById('pMobileToggle');
+        var nav = document.getElementById('pNav');
+        var overlay = document.getElementById('pNavOverlay');
+        if (toggle && nav) {
+          function closeMenu() {
+            toggle.classList.remove('active');
+            toggle.setAttribute('aria-expanded', 'false');
+            nav.classList.remove('open');
+            if (overlay) overlay.classList.remove('open');
+            document.body.style.overflow = '';
+          }
+          toggle.addEventListener('click', function() {
+            var isOpen = nav.classList.contains('open');
+            if (isOpen) {
+              closeMenu();
+            } else {
+              toggle.classList.add('active');
+              toggle.setAttribute('aria-expanded', 'true');
+              nav.classList.add('open');
+              if (overlay) overlay.classList.add('open');
+              document.body.style.overflow = 'hidden';
+            }
+          });
+          if (overlay) overlay.addEventListener('click', closeMenu);
+          nav.querySelectorAll('.p-nav-link').forEach(function(link) {
+            link.addEventListener('click', closeMenu);
           });
         }
       })();
