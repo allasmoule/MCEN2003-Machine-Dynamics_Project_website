@@ -378,9 +378,24 @@ img { max-width: 100%; }
       batch: document.getElementById('suBatch').value.trim(),
       password: document.getElementById('suPassword').value
     }).then(function () {
-      showMsg('Account created — redirecting…', 'ok');
+      showMsg('Account created successfully — redirecting…', 'ok');
       location.replace(next);
     }).catch(function (err) {
+      btn.disabled = false;
+      var errText = err && err.message ? err.message : '';
+      var isRealBackendError = errText &&
+        errText !== 'API unavailable' &&
+        errText !== 'OK_NON_JSON' &&
+        errText !== 'API_NON_JSON' &&
+        !errText.includes('Failed to fetch') &&
+        !errText.includes('Unexpected end') &&
+        !errText.includes('JSON');
+
+      if (isRealBackendError) {
+        showMsg(errText, 'error');
+        return;
+      }
+
       /* Static fallback when backend API is not present */
       try { localStorage.setItem('demo_user', JSON.stringify({ name: name || 'Student', email: email })); } catch (e) {}
       showMsg('Account created — redirecting…', 'ok');

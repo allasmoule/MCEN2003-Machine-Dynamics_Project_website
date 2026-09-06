@@ -449,7 +449,113 @@
               </ul>
               <p class="p-exp-note">&#9733; Key achievement: gained practical knowledge and skills for improving
                 industrial production.</p>
-      </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- HOMEPAGE CONTACT SECTION -->
+      <section class="p-section" id="contactSection" style="padding-top: 40px;">
+        <div class="p-sec-head">
+          <span class="p-tag">GET IN TOUCH</span>
+          <h2>Contact &amp; Work With Me</h2>
+          <div class="p-underline"></div>
+          <p class="p-desc">Have a question, collaboration proposal, or project inquiry? Send a direct message below.</p>
+        </div>
+
+        <div class="p-contact-grid">
+          <!-- Left Info Side -->
+          <div class="p-contact-info">
+            <h3 class="p-contact-title">Let's Connect &amp; Collaborate</h3>
+            <p class="p-contact-desc">
+              Fill out the form to send a message directly to Prof. Raju Ahamed's administrative portal.
+            </p>
+
+            <div class="p-contact-cards">
+              <div class="p-cinfo-card">
+                <div class="p-cinfo-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                </div>
+                <div>
+                  <h4>Email Address</h4>
+                  <a href="mailto:raju.ahamedruet07@gmail.com">raju.ahamedruet07@gmail.com</a>
+                </div>
+              </div>
+
+              <div class="p-cinfo-card">
+                <div class="p-cinfo-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                </div>
+                <div>
+                  <h4>Office Location</h4>
+                  <p>School of Civil &amp; Mechanical Engineering, Curtin University, Perth, WA</p>
+                </div>
+              </div>
+
+              <div class="p-cinfo-card">
+                <div class="p-cinfo-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+                </div>
+                <div>
+                  <h4>LinkedIn Profile</h4>
+                  <a href="https://www.linkedin.com/in/rajuahamed07/" target="_blank" rel="noopener">linkedin.com/in/rajuahamed07</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Form Side -->
+          <div class="p-contact-form-card">
+            <form id="hpContactForm">
+              <div class="p-form-type-selector">
+                <label class="p-type-btn">
+                  <input type="radio" name="hpType" value="Work With Me" id="hptypeWork">
+                  <span>Work With Me</span>
+                </label>
+                <label class="p-type-btn">
+                  <input type="radio" name="hpType" value="General Inquiry" id="hptypeGeneral" checked>
+                  <span>General Contact</span>
+                </label>
+                <label class="p-type-btn">
+                  <input type="radio" name="hpType" value="Research Collaboration" id="hptypeResearch">
+                  <span>Research</span>
+                </label>
+              </div>
+
+              <div class="p-form-group">
+                <label for="hpContactName">Your Name *</label>
+                <input type="text" id="hpContactName" name="name" placeholder="Enter your full name" required>
+              </div>
+
+              <div class="p-form-row">
+                <div class="p-form-group">
+                  <label for="hpContactEmail">Email Address *</label>
+                  <input type="email" id="hpContactEmail" name="email" placeholder="e.g. alex@example.com" required>
+                </div>
+                <div class="p-form-group">
+                  <label for="hpContactPhone">Phone Number *</label>
+                  <input type="tel" id="hpContactPhone" name="phone" placeholder="e.g. +61 400 000 000" required>
+                </div>
+              </div>
+
+              <div class="p-form-group">
+                <label for="hpContactMessage">Message *</label>
+                <textarea id="hpContactMessage" name="message" rows="4" placeholder="Write your message or project details here..." required></textarea>
+              </div>
+
+              <div id="hpContactStatus" hidden class="p-form-status"></div>
+
+              <button type="submit" class="p-btn p-btn-primary p-btn-full" id="hpContactSubmitBtn">
+                <svg class="p-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+                Send Message
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer class="p-footer">
@@ -568,6 +674,63 @@
             link.addEventListener('click', closeMenu);
           });
         }
+      // Homepage Contact Form Handler
+      (function() {
+        var form = document.getElementById('hpContactForm');
+        if (!form) return;
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          var statusEl = document.getElementById('hpContactStatus');
+          var submitBtn = document.getElementById('hpContactSubmitBtn');
+          var selectedType = 'General Inquiry';
+          var radios = form.querySelectorAll('input[name="hpType"]');
+          radios.forEach(function(r) { if (r.checked) selectedType = r.value; });
+
+          var payload = {
+            type: selectedType,
+            name: document.getElementById('hpContactName').value.trim(),
+            email: document.getElementById('hpContactEmail').value.trim(),
+            phone: document.getElementById('hpContactPhone').value.trim(),
+            message: document.getElementById('hpContactMessage').value.trim()
+          };
+
+          if (!payload.name || !payload.email || !payload.phone || !payload.message) {
+            statusEl.className = 'p-form-status error';
+            statusEl.textContent = 'Please fill out all required fields.';
+            statusEl.hidden = false;
+            return;
+          }
+
+          submitBtn.disabled = true;
+          submitBtn.style.opacity = '0.7';
+
+          fetch('api/contact.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }).then(function(r) { return r.json(); }).then(function(data) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            if (data.ok) {
+              statusEl.className = 'p-form-status success';
+              statusEl.textContent = data.message || 'Thank you! Your message has been sent successfully.';
+              statusEl.hidden = false;
+              form.reset();
+              var defType = document.getElementById('hptypeGeneral');
+              if (defType) defType.checked = true;
+            } else {
+              statusEl.className = 'p-form-status error';
+              statusEl.textContent = data.error || 'Could not send message. Please try again.';
+              statusEl.hidden = false;
+            }
+          }).catch(function() {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            statusEl.className = 'p-form-status error';
+            statusEl.textContent = 'An error occurred while sending your message.';
+            statusEl.hidden = false;
+          });
+        });
       })();
     })();
   </script>
