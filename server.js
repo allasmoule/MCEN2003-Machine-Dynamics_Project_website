@@ -12,7 +12,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Initialize SQLite database
-const dbPath = path.join(__dirname, 'app.db');
+let dbPath = path.join(__dirname, 'app.db');
+if (process.env.VERCEL) {
+  const tmpPath = path.join('/tmp', 'app.db');
+  if (!fs.existsSync(tmpPath) && fs.existsSync(dbPath)) {
+    try { fs.copyFileSync(dbPath, tmpPath); } catch (e) {}
+  }
+  dbPath = tmpPath;
+}
 const db = new DatabaseSync(dbPath);
 
 // Create tables
@@ -2311,6 +2318,10 @@ app.get('/api/notes.php', (req, res) => {
 // Serve static frontend files
 app.use(express.static(__dirname));
 
-app.listen(PORT, () => {
-  console.log(`MCEN2003 Machine Dynamics Website running at http://localhost:${PORT}`);
-});
+module.exports = app;
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`MCEN2003 Machine Dynamics Website running at http://localhost:${PORT}`);
+  });
+}

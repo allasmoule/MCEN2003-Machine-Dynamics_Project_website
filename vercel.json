@@ -2,19 +2,11 @@
   "version": 2,
   "builds": [
     {
-      "src": "index.html",
-      "use": "@vercel/static"
+      "src": "server.js",
+      "use": "@vercel/node"
     },
     {
-      "src": "subject.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "login.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "tutorial1.html",
+      "src": "*.html",
       "use": "@vercel/static"
     },
     {
@@ -32,68 +24,52 @@
     {
       "src": "*.png",
       "use": "@vercel/static"
-    },
-    {
-      "src": "api/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "admin/**",
-      "use": "@vercel/static"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/admin/index.php",
-      "destination": "/admin/index.html"
+      "src": "/api/(.*)",
+      "dest": "server.js"
     },
     {
-      "source": "/admin/",
-      "destination": "/admin/index.html"
+      "src": "/admin/index.php",
+      "dest": "/admin/index.html"
     },
     {
-      "source": "/admin/subjects.php",
-      "destination": "/admin/index.html#subjects"
+      "src": "/admin/subjects.php",
+      "dest": "/admin/index.html#subjects"
     },
     {
-      "source": "/admin/tutorials.php",
-      "destination": "/admin/index.html#tutorials"
+      "src": "/admin/tutorials.php",
+      "dest": "/admin/index.html#tutorials"
     },
     {
-      "source": "/admin/questions.php",
-      "destination": "/admin/index.html#questions"
+      "src": "/admin/questions.php",
+      "dest": "/admin/index.html#questions"
     },
     {
-      "source": "/admin/formula_sheet.php",
-      "destination": "/admin/index.html#formula"
+      "src": "/admin/formula_sheet.php",
+      "dest": "/admin/index.html#formula"
     },
     {
-      "source": "/admin/messages.php",
-      "destination": "/admin/index.html"
+      "src": "/admin/messages.php",
+      "dest": "/admin/index.html"
     },
     {
-      "source": "/admin/videos.php",
-      "destination": "/admin/index.html#videos"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/admin/(.*)",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "text/html; charset=utf-8"
-        }
-      ]
+      "src": "/admin/videos.php",
+      "dest": "/admin/index.html#videos"
     },
     {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/json; charset=utf-8"
-        }
-      ]
+      "src": "/admin/(.*)",
+      "dest": "/admin/index.html"
+    },
+    {
+      "src": "/admin",
+      "dest": "/admin/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }

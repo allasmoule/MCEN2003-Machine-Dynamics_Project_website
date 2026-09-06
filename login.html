@@ -264,13 +264,16 @@ img { max-width: 100%; }
       body: JSON.stringify(data)
     }).then(function (res) {
       return res.text().then(function (text) {
+        var body = null;
         try {
-          var body = JSON.parse(text);
-          if (!res.ok) throw new Error(body.error || 'Something went wrong.');
-          return body;
+          body = JSON.parse(text);
         } catch (e) {
-          throw new Error(res.ok ? 'OK_NON_JSON' : (e.message || 'API unavailable'));
+          throw new Error('API_NON_JSON');
         }
+        if (!res.ok) {
+          throw new Error(body.error || 'Something went wrong.');
+        }
+        return body;
       });
     });
   }
@@ -305,7 +308,13 @@ img { max-width: 100%; }
     }).catch(function (err) {
       btn.disabled = false;
       var errText = err && err.message ? err.message : '';
-      var isRealBackendError = errText && errText !== 'API unavailable' && errText !== 'OK_NON_JSON' && !errText.includes('Failed to fetch');
+      var isRealBackendError = errText &&
+        errText !== 'API unavailable' &&
+        errText !== 'OK_NON_JSON' &&
+        errText !== 'API_NON_JSON' &&
+        !errText.includes('Failed to fetch') &&
+        !errText.includes('Unexpected end') &&
+        !errText.includes('JSON');
 
       if (isRealBackendError) {
         showMsg(errText, 'error');
