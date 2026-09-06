@@ -783,8 +783,22 @@ function save(){
 function esc(s){return String(s || '').replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
 /* ============================================================
-   RAIL
+   RAIL ACCORDION NAVIGATION
    ============================================================ */
+function setupSidebarAccordions() {
+  const headers = document.querySelectorAll(".rail-acc-header");
+  headers.forEach(h => {
+    h.addEventListener("click", () => {
+      const item = h.closest(".rail-acc-item");
+      if (!item) return;
+      const isActive = item.classList.contains("active");
+      item.classList.toggle("active", !isActive);
+      h.setAttribute("aria-expanded", !isActive ? "true" : "false");
+    });
+  });
+}
+setupSidebarAccordions();
+
 const railList=document.getElementById("railList");
 
 function qState(q){
@@ -2080,6 +2094,106 @@ const DEFAULT_NOTES = [
   }
 ];
 
+function renderSidebarVideos(list){
+  const listEl = document.getElementById("railVideoList");
+  const countEl = document.getElementById("videoCount");
+  if (countEl) countEl.textContent = list.length;
+  if (!listEl) return;
+  listEl.innerHTML = list.map((v, i) =>
+    '<li><button class="rail-sub-item" data-vindex="' + i + '" title="' + esc(v.title) + '">' +
+    '<svg class="rail-sub-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="10 8 16 12 10 16 10 8"/></svg>' +
+    '<span class="rail-sub-text">' + esc(v.title) + '</span>' +
+    '</button></li>'
+  ).join("");
+  listEl.querySelectorAll("button.rail-sub-item").forEach((b, i) => {
+    b.addEventListener("click", () => {
+      if (videosPanel) {
+        videosPanel.hidden = false;
+        if (videosToggle) {
+          videosToggle.setAttribute("aria-pressed", "true");
+          videosToggle.classList.add("active");
+        }
+        const vItems = videosPanel.querySelectorAll(".video-item");
+        if (vItems[i]) {
+          vItems[i].scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } else {
+          videosPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }
+    });
+  });
+}
+
+function renderSidebarPdfs(list){
+  const listEl = document.getElementById("railPdfList");
+  const countEl = document.getElementById("pdfCount");
+  if (countEl) countEl.textContent = list.length;
+  if (!listEl) return;
+  listEl.innerHTML = list.map((p, i) =>
+    '<li><button class="rail-sub-item" data-pindex="' + i + '" title="' + esc(p.title) + '">' +
+    '<svg class="rail-sub-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+    '<span class="rail-sub-text">' + esc(p.title) + '</span>' +
+    '</button></li>'
+  ).join("");
+  listEl.querySelectorAll("button.rail-sub-item").forEach((b, i) => {
+    b.addEventListener("click", () => {
+      if (pdfsPanel) {
+        pdfsPanel.hidden = false;
+        if (pdfsToggle) {
+          pdfsToggle.setAttribute("aria-pressed", "true");
+          pdfsToggle.classList.add("active");
+        }
+        pdfsPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    });
+  });
+}
+
+function renderSidebarNotes(list){
+  const listEl = document.getElementById("railNoteList");
+  const countEl = document.getElementById("noteCount");
+  if (countEl) countEl.textContent = list.length + 1;
+  if (!listEl) return;
+  let itemsHtml = '<li><button class="rail-sub-item" id="railFsBtn" title="Formula Sheet Extract">' +
+    '<svg class="rail-sub-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2h10v12H3z"/><path d="M5.2 5h5.6M5.2 8h5.6M5.2 11h3.2"/></svg>' +
+    '<span class="rail-sub-text">Formula Sheet Extract</span>' +
+    '</button></li>';
+  itemsHtml += list.map((n, i) =>
+    '<li><button class="rail-sub-item" data-nindex="' + i + '" title="' + esc(n.title) + '">' +
+    '<svg class="rail-sub-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>' +
+    '<span class="rail-sub-text">' + esc(n.title) + '</span>' +
+    '</button></li>'
+  ).join("");
+  listEl.innerHTML = itemsHtml;
+  
+  const fsBtn = document.getElementById("railFsBtn");
+  if (fsBtn) {
+    fsBtn.addEventListener("click", () => {
+      if (fsPanel) {
+        fsPanel.hidden = false;
+        if (fsToggle) {
+          fsToggle.setAttribute("aria-pressed", "true");
+          fsToggle.classList.add("active");
+        }
+        fsPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    });
+  }
+
+  listEl.querySelectorAll("button.rail-sub-item[data-nindex]").forEach((b, i) => {
+    b.addEventListener("click", () => {
+      if (notesPanel) {
+        notesPanel.hidden = false;
+        if (notesToggle) {
+          notesToggle.setAttribute("aria-pressed", "true");
+          notesToggle.classList.add("active");
+        }
+        notesPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    });
+  });
+}
+
 function renderVideos(videos){
   if(!videosPanel || !videosToggle) return;
   const list = (Array.isArray(videos) && videos.length > 0) ? videos : DEFAULT_VIDEOS;
@@ -2098,6 +2212,7 @@ function renderVideos(videos){
     ).join("") +
     '</div>';
   videosToggle.hidden = false;
+  renderSidebarVideos(list);
 }
 
 function renderPdfs(pdfs){
@@ -2117,6 +2232,7 @@ function renderPdfs(pdfs){
     ).join("") +
     '</div>';
   pdfsToggle.hidden = false;
+  renderSidebarPdfs(list);
 }
 
 function renderNotes(notes){
@@ -2138,6 +2254,7 @@ function renderNotes(notes){
     ).join("") +
     '</div>';
   notesToggle.hidden = false;
+  renderSidebarNotes(list);
 }
 
 (async function bootstrap(){

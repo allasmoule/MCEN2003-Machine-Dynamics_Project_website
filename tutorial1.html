@@ -126,9 +126,66 @@ img{max-width:100%}
 </header>
 
 <div class="shell">
-  <nav class="rail" aria-label="Questions">
-    <div class="rail-head"><span class="label">Tutorial</span><span class="label" id="railCount"></span></div>
-    <ul class="rail-list" id="railList"></ul>
+  <nav class="rail" aria-label="Tutorial Content Navigation" id="sidebarRail">
+    <!-- Category 1: Questions (Default Open) -->
+    <div class="rail-acc-item active" id="accItemQuestions">
+      <button class="rail-acc-header" type="button" aria-expanded="true" data-acc="questions">
+        <span class="rail-acc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+        </span>
+        <span class="rail-acc-title">Questions</span>
+        <span class="rail-acc-badge" id="railCount">5</span>
+        <svg class="rail-acc-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="rail-acc-body">
+        <ul class="rail-list" id="railList"></ul>
+      </div>
+    </div>
+
+    <!-- Category 2: Video Lessons -->
+    <div class="rail-acc-item" id="accItemVideos">
+      <button class="rail-acc-header" type="button" aria-expanded="false" data-acc="videos">
+        <span class="rail-acc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2.5"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+        </span>
+        <span class="rail-acc-title">Video Lessons</span>
+        <span class="rail-acc-badge" id="videoCount">0</span>
+        <svg class="rail-acc-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="rail-acc-body">
+        <ul class="rail-sub-list" id="railVideoList"></ul>
+      </div>
+    </div>
+
+    <!-- Category 3: PDF Documents -->
+    <div class="rail-acc-item" id="accItemPdfs">
+      <button class="rail-acc-header" type="button" aria-expanded="false" data-acc="pdfs">
+        <span class="rail-acc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </span>
+        <span class="rail-acc-title">PDF Documents</span>
+        <span class="rail-acc-badge" id="pdfCount">0</span>
+        <svg class="rail-acc-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="rail-acc-body">
+        <ul class="rail-sub-list" id="railPdfList"></ul>
+      </div>
+    </div>
+
+    <!-- Category 4: Notes & Reading -->
+    <div class="rail-acc-item" id="accItemNotes">
+      <button class="rail-acc-header" type="button" aria-expanded="false" data-acc="notes">
+        <span class="rail-acc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M8 7h8M8 11h8"/></svg>
+        </span>
+        <span class="rail-acc-title">Notes &amp; Reading</span>
+        <span class="rail-acc-badge" id="noteCount">0</span>
+        <svg class="rail-acc-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="rail-acc-body">
+        <ul class="rail-sub-list" id="railNoteList"></ul>
+      </div>
+    </div>
   </nav>
 
   <main class="stack">
