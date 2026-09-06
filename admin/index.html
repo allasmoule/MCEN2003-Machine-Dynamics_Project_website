@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Panel — MCEN2003 Machine Dynamics | Prof. Md. Roju Ahomed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="admin.css">
+<style>
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+.admin-modal {
+  position: fixed; inset: 0; z-index: 9999; background: rgba(15,23,42,0.6);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.admin-modal-card {
+  background: #FFF; width: 100%; max-width: 600px; border-radius: 12px;
+  padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto;
+}
+.admin-modal-card h2 { margin-top: 0; font-size: 20px; color: #0F172A; }
+.badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+.badge-green { background: #E0F0E6; color: #2B7A51; }
+.badge-blue { background: #E0EEF3; color: #0F5F7D; }
+</style>
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <div class="admin-brand">
+      <span class="admin-brand-mark">Admin</span>
+      <span class="admin-brand-sub">MCEN2003 Machine Dynamics</span>
+    </div>
+    <nav class="admin-nav">
+      <a href="#students" class="active" id="navStudents">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Students
+      </a>
+      <a href="#subjects" id="navSubjects">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+        Subjects
+      </a>
+      <a href="#tutorials" id="navTutorials">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        Tutorials
+      </a>
+      <a href="#questions" id="navQuestions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Questions
+      </a>
+      <a href="#videos" id="navVideos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2.18"/><line x1="10" y1="9" x2="16" y2="12"/><line x1="10" y1="15" x2="16" y2="12"/></svg>
+        Videos
+      </a>
+      <a href="#formula" id="navFormula">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2h10v12H3z"/><path d="M5.2 5h5.6M5.2 8h5.6M5.2 11h3.2"/></svg>
+        Formula Sheet
+      </a>
+    </nav>
+    <a class="admin-logout" href="../index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      Back to Website
+    </a>
+  </aside>
+
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <div>
+        <h1 id="pageTitle">Students</h1>
+      </div>
+    </header>
+    <main class="admin-content">
+
+      <!-- TAB: STUDENTS -->
+      <div class="tab-pane active" id="paneStudents">
+        <div class="toolbar">
+          <span class="meta" id="studentCount">2 registered students</span>
+          <input type="text" id="searchStudents" placeholder="Search name, email, batch&hellip;" style="max-width:260px">
+        </div>
+        <table id="userTable">
+          <thead>
+            <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="studentTableBody">
+            <tr>
+              <td>Prof. Md. Roju Ahomed</td>
+              <td>Raju.ahamedruet07@gmail.com</td>
+              <td>Administrator</td>
+              <td><span class="badge badge-green">Active</span></td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Demo Student</td>
+              <td>demo@mcen2003.local</td>
+              <td>Student</td>
+              <td><span class="badge badge-blue">Demo</span></td>
+              <td><button type="button" class="btn btn-outline" style="padding:4px 8px;font-size:12px" onclick="deleteStudent(this)">Delete</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB: SUBJECTS -->
+      <div class="tab-pane" id="paneSubjects">
+        <div class="toolbar">
+          <span class="meta">Subject Catalog</span>
+          <button type="button" class="btn btn-primary" onclick="openSubjectModal()">+ New Subject</button>
+        </div>
+        <table id="subjectTable">
+          <thead>
+            <tr><th>Subject Name</th><th>Institution</th><th>Tutorials</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="subjectTableBody">
+            <tr>
+              <td>MCEN2003 Machine Dynamics</td>
+              <td>Curtin University</td>
+              <td>1 Tutorial</td>
+              <td class="row-actions">
+                <button class="btn btn-outline" style="padding:4px 8px;font-size:12px" onclick="openSubjectModal('MCEN2003 Machine Dynamics', 'Curtin University', 'Interactive kinematics, dynamics, vibrations, and machine analysis workbooks.')">Edit</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB: TUTORIALS -->
+      <div class="tab-pane" id="paneTutorials">
+        <div class="toolbar">
+          <span class="meta">Tutorials list</span>
+          <button type="button" class="btn btn-primary" onclick="openTutorialModal()">+ New Tutorial</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Title</th><th>Subject</th><th>Questions</th><th>Videos</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="tutorialTableBody">
+            <tr>
+              <td>Tutorial 1 — Kinematics</td>
+              <td>MCEN2003 Machine Dynamics</td>
+              <td>5 Questions</td>
+              <td>0 Videos</td>
+              <td class="row-actions">
+                <button class="btn btn-outline" style="padding:4px 8px;font-size:12px" onclick="openTutorialModal('Tutorial 1 — Kinematics', 'Kinematics workbook questions and step-by-step solutions.')">Edit</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB: QUESTIONS -->
+      <div class="tab-pane" id="paneQuestions">
+        <div class="toolbar">
+          <span class="meta">Questions in Tutorial 1</span>
+          <button type="button" class="btn btn-primary" onclick="openQuestionModal()">+ New Question</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Code</th><th>Topic</th><th>Title</th><th>Parts</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="questionTableBody">
+            <tr>
+              <td><span class="code-chip">T1.1</span></td>
+              <td>Linear kinematics</td>
+              <td>Train braking linearly</td>
+              <td>3 parts</td>
+              <td class="row-actions">
+                <button class="btn btn-outline" style="padding:4px 8px;font-size:12px" onclick="openQuestionModal('T1.1', 'Linear kinematics', 'Train braking linearly')">Edit</button>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="code-chip">T1.2</span></td>
+              <td>Non-constant acceleration</td>
+              <td>1-D accelerometer signal</td>
+              <td>4 parts</td>
+              <td class="row-actions">
+                <button class="btn btn-outline" style="padding:4px 8px;font-size:12px" onclick="openQuestionModal('T1.2', 'Non-constant acceleration', '1-D accelerometer signal')">Edit</button>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="code-chip">T1.3</span></td>
+              <td>Rotational kinematics</td>
+              <td>Belt-driven pulley decelerating</td>
+              <td>5 parts</td>
+              <td class="row-actions">
+                <button class="btn btn-outline" style="padding:4px 8px;font-size:12px" onclick="openQuestionModal('T1.3', 'Rotational kinematics', 'Belt-driven pulley decelerating')">Edit</button>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="code-chip">T1.4</span></td>
+              <td>Normal and tangential components</td>
+              <td>Roller coaster entering loop</td>
+              <td>3 parts</td>
+              <td class="row-actions">
+                <button class="btn btn-outline" style="padding:4px 8px;font-size:12px" onclick="openQuestionModal('T1.4', 'Normal and tangential components', 'Roller coaster entering loop')">Edit</button>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="code-chip">T1.5</span></td>
+              <td>Polar coordinates</td>
+              <td>Robotic arm extending and rotating</td>
+              <td>4 parts</td>
+              <td class="row-actions">
+                <button class="btn btn-outline" style="padding:4px 8px;font-size:12px" onclick="openQuestionModal('T1.5', 'Polar coordinates', 'Robotic arm extending and rotating')">Edit</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB: VIDEOS -->
+      <div class="tab-pane" id="paneVideos">
+        <div class="toolbar">
+          <span class="meta">Video Lectures / Solutions</span>
+          <button type="button" class="btn btn-primary" onclick="openVideoModal()">+ Add Video</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Title</th><th>URL</th><th>Tutorial</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="videoTableBody">
+            <tr>
+              <td>Tutorial 1 Kinematics Overview</td>
+              <td>https://www.youtube.com/watch?v=demo</td>
+              <td>Tutorial 1</td>
+              <td class="row-actions">
+                <button class="btn btn-outline" style="padding:4px 8px;font-size:12px" onclick="openVideoModal('Tutorial 1 Kinematics Overview', 'https://www.youtube.com/watch?v=demo')">Edit</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB: FORMULA SHEET -->
+      <div class="tab-pane" id="paneFormula">
+        <div class="toolbar">
+          <span class="meta">Exam Kinematics Formula Sheet</span>
+          <button type="button" class="btn btn-primary" onclick="alert('Formula sheet updated successfully!')">Save Formula Sheet</button>
+        </div>
+        <div class="card" style="background:#FFF;padding:20px;border-radius:8px;border:1px solid #E2E8F0;margin-bottom:16px;">
+          <div class="field"><label>Heading</label><input type="text" value="MCEN2003 formula sheet — kinematics extract"></div>
+          <div class="field"><label>Subheading</label><input type="text" value="Same sheet you get in the exam."></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
+          <div class="card" style="background:#F8FAFC;padding:16px;border:1px solid #E2E8F0;border-radius:8px;">
+            <h4 style="margin-top:0">Linear motion</h4>
+            <textarea rows="4" style="width:100%;font-family:monospace;font-size:13px;padding:8px">v = ds/dt   a = dv/dt
+Δv = ∫ a dt   Δs = ∫ v dt
+v = u + at
+Δs = ut + ½at²
+v² = u² + 2aΔs</textarea>
+          </div>
+          <div class="card" style="background:#F8FAFC;padding:16px;border:1px solid #E2E8F0;border-radius:8px;">
+            <h4 style="margin-top:0">Rotational motion</h4>
+            <textarea rows="4" style="width:100%;font-family:monospace;font-size:13px;padding:8px">ω = dθ/dt   α = dω/dt
+ω = ω₀ + αt
+θ = ω₀t + ½αt²
+ω² = ω₀² + 2αθ
+1 rpm = 2π/60 rad/s</textarea>
+          </div>
+          <div class="card" style="background:#F8FAFC;padding:16px;border:1px solid #E2E8F0;border-radius:8px;">
+            <h4 style="margin-top:0">Circular motion</h4>
+            <textarea rows="4" style="width:100%;font-family:monospace;font-size:13px;padding:8px">v = rω
+a_t = rα
+a_n = v²/r = rω²
+s = rθ</textarea>
+          </div>
+          <div class="card" style="background:#F8FAFC;padding:16px;border:1px solid #E2E8F0;border-radius:8px;">
+            <h4 style="margin-top:0">Constants & conversions</h4>
+            <textarea rows="4" style="width:100%;font-family:monospace;font-size:13px;padding:8px">g = 9.81 m/s²
+km/h → m/s: ÷ 3.6
+rpm → rad/s: × 2π/60
+rad → rev: ÷ 2π</textarea>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODAL DIALOG -->
+<div class="admin-modal" id="adminModal" style="display:none">
+  <div class="admin-modal-card">
+    <h2 id="modalTitle">Edit Item</h2>
+    <div id="modalFields"></div>
+    <div style="margin-top:20px;display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn btn-outline" type="button" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" type="button" onclick="saveModal()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var titleEl = document.getElementById('pageTitle');
+  var tabs = {
+    students: document.getElementById('paneStudents'),
+    subjects: document.getElementById('paneSubjects'),
+    tutorials: document.getElementById('paneTutorials'),
+    questions: document.getElementById('paneQuestions'),
+    videos: document.getElementById('paneVideos'),
+    formula: document.getElementById('paneFormula')
+  };
+
+  var navs = {
+    students: document.getElementById('navStudents'),
+    subjects: document.getElementById('navSubjects'),
+    tutorials: document.getElementById('navTutorials'),
+    questions: document.getElementById('navQuestions'),
+    videos: document.getElementById('navVideos'),
+    formula: document.getElementById('navFormula')
+  };
+
+  function setTab(which) {
+    Object.keys(tabs).forEach(function(k) {
+      if (tabs[k]) tabs[k].classList.toggle('active', k === which);
+      if (navs[k]) navs[k].classList.toggle('active', k === which);
+    });
+
+    var titles = {
+      students: 'Students',
+      subjects: 'Subjects',
+      tutorials: 'Tutorials',
+      questions: 'Questions',
+      videos: 'Videos',
+      formula: 'Formula Sheet'
+    };
+    titleEl.textContent = titles[which] || 'Admin Panel';
+  }
+
+  Object.keys(navs).forEach(function(k) {
+    if (navs[k]) {
+      navs[k].addEventListener('click', function(e) {
+        e.preventDefault();
+        setTab(k);
+      });
+    }
+  });
+
+  // Handle URL hash tab switching
+  var hash = (location.hash || '#students').substring(1);
+  if (tabs[hash]) setTab(hash);
+
+  window.deleteStudent = function(btn) {
+    if (confirm('Delete this student user?')) {
+      var row = btn.closest('tr');
+      if (row) row.remove();
+    }
+  };
+
+  window.openSubjectModal = function(name, inst, desc) {
+    document.getElementById('modalTitle').textContent = name ? 'Edit Subject' : 'New Subject';
+    document.getElementById('modalFields').innerHTML =
+      '<div class="field"><label>Subject Name</label><input id="mSubName" value="' + (name||'') + '" placeholder="e.g. MCEN2003 Machine Dynamics"></div>' +
+      '<div class="field"><label>Institution</label><input id="mSubInst" value="' + (inst||'') + '" placeholder="e.g. Curtin University"></div>' +
+      '<div class="field"><label>Description</label><textarea id="mSubDesc" rows="3">' + (desc||'') + '</textarea></div>';
+    document.getElementById('adminModal').style.display = 'flex';
+  };
+
+  window.openTutorialModal = function(title, desc) {
+    document.getElementById('modalTitle').textContent = title ? 'Edit Tutorial' : 'New Tutorial';
+    document.getElementById('modalFields').innerHTML =
+      '<div class="field"><label>Tutorial Title</label><input id="mTutTitle" value="' + (title||'') + '" placeholder="e.g. Tutorial 2 — Dynamics"></div>' +
+      '<div class="field"><label>Description</label><textarea id="mTutDesc" rows="3">' + (desc||'') + '</textarea></div>';
+    document.getElementById('adminModal').style.display = 'flex';
+  };
+
+  window.openQuestionModal = function(code, topic, qTitle) {
+    document.getElementById('modalTitle').textContent = code ? 'Edit Question ' + code : 'New Question';
+    document.getElementById('modalFields').innerHTML =
+      '<div class="field"><label>Question Code</label><input id="mQCode" value="' + (code||'') + '" placeholder="e.g. T1.6"></div>' +
+      '<div class="field"><label>Topic</label><input id="mQTopic" value="' + (topic||'') + '" placeholder="e.g. Kinematics"></div>' +
+      '<div class="field"><label>Title</label><input id="mQTitle" value="' + (qTitle||'') + '" placeholder="Question title"></div>';
+    document.getElementById('adminModal').style.display = 'flex';
+  };
+
+  window.openVideoModal = function(title, url) {
+    document.getElementById('modalTitle').textContent = title ? 'Edit Video' : 'Add Video';
+    document.getElementById('modalFields').innerHTML =
+      '<div class="field"><label>Video Title</label><input id="mVTitle" value="' + (title||'') + '" placeholder="e.g. Kinematics Worked Solution"></div>' +
+      '<div class="field"><label>Video URL (YouTube/Vimeo/MP4)</label><input id="mVUrl" value="' + (url||'') + '" placeholder="https://www.youtube.com/watch?v=..."></div>';
+    document.getElementById('adminModal').style.display = 'flex';
+  };
+
+  window.closeModal = function() {
+    document.getElementById('adminModal').style.display = 'none';
+  };
+
+  window.saveModal = function() {
+    alert('Changes saved successfully!');
+    closeModal();
+  };
+})();
+</script>
+</body>
+</html>

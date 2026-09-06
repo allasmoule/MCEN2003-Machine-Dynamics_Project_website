@@ -42,6 +42,40 @@
       "use": "@vercel/static"
     }
   ],
+  "rewrites": [
+    {
+      "source": "/admin/index.php",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/subjects.php",
+      "destination": "/admin/index.html#subjects"
+    },
+    {
+      "source": "/admin/tutorials.php",
+      "destination": "/admin/index.html#tutorials"
+    },
+    {
+      "source": "/admin/questions.php",
+      "destination": "/admin/index.html#questions"
+    },
+    {
+      "source": "/admin/formula_sheet.php",
+      "destination": "/admin/index.html#formula"
+    },
+    {
+      "source": "/admin/messages.php",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/videos.php",
+      "destination": "/admin/index.html#videos"
+    }
+  ],
   "headers": [
     {
       "source": "/admin/(.*)",
@@ -60,12 +94,6 @@
           "value": "application/json; charset=utf-8"
         }
       ]
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
     }
   ]
 }
