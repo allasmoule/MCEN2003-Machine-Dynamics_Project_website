@@ -222,6 +222,33 @@ function seedData() {
       console.log('Seeded formula_sheet.');
     }
   }
+
+  // Seed videos if empty
+  const vCount = db.prepare('SELECT COUNT(*) as cnt FROM videos WHERE tutorial_id = ?').get(tutorialId);
+  if (vCount && vCount.cnt === 0) {
+    const insertV = db.prepare('INSERT INTO videos (tutorial_id, title, url, description, sort_order) VALUES (?, ?, ?, ?, ?)');
+    insertV.run(tutorialId, 'Kinematics of Particles & Rigid Bodies - Concept Overview', 'https://www.youtube.com/watch?v=XTO8A2eB6C8', 'Step-by-step introduction to linear, angular, and relative velocity/acceleration equations.', 10);
+    insertV.run(tutorialId, 'Relative Velocity & Acceleration Analysis in Planar Mechanisms', 'https://www.youtube.com/watch?v=0kF170-xTlg', 'Detailed walkthrough of relative motion equations for multi-link planar mechanisms.', 20);
+    console.log('Seeded videos for Tutorial 1.');
+  }
+
+  // Seed pdfs if empty
+  const pCount = db.prepare('SELECT COUNT(*) as cnt FROM pdfs WHERE tutorial_id = ?').get(tutorialId);
+  if (pCount && pCount.cnt === 0) {
+    const insertP = db.prepare('INSERT INTO pdfs (tutorial_id, title, url, description, sort_order) VALUES (?, ?, ?, ?, ?)');
+    insertP.run(tutorialId, 'Tutorial 1 Kinematics - Lecture & Workbook Guide', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', 'Complete lecture notes on linear and rotational kinematics equations.', 10);
+    insertP.run(tutorialId, 'Kinematics Formulas & Vector Derivations Sheet', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', 'Quick reference PDF with kinematic vector component definitions and unit conversions.', 20);
+    console.log('Seeded PDFs for Tutorial 1.');
+  }
+
+  // Seed notes if empty
+  const nCount = db.prepare('SELECT COUNT(*) as cnt FROM notes WHERE tutorial_id = ?').get(tutorialId);
+  if (nCount && nCount.cnt === 0) {
+    const insertN = db.prepare('INSERT INTO notes (tutorial_id, title, description, content, sort_order) VALUES (?, ?, ?, ?, ?)');
+    insertN.run(tutorialId, 'Summary of Rectilinear & Curvilinear Motion', 'Core Kinematics Summary', "Key principles:\n1) Rectilinear motion: v = ds/dt, a = dv/dt. Constant acceleration: v = u + at, s = ut + 0.5*a*t².\n2) Curvilinear motion in Cartesian and Polar components: v_r = ṙ, v_θ = rθ̇, a_r = r̈ - rθ̇², a_θ = rθ̈ + 2ṙθ̇.", 10);
+    insertN.run(tutorialId, 'Relative Motion Vector Analysis Guide', 'Vector Derivations Guide', "For two points A and B on a rigid body:\nv_B = v_A + v_B/A where v_B/A = ω × r_B/A.\nRemember to separate into i and j vector components before solving for unknown scalar magnitudes.", 20);
+    console.log('Seeded notes for Tutorial 1.');
+  }
 }
 
 seedData();

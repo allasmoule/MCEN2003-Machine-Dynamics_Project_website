@@ -2041,16 +2041,52 @@ function embedHtml(url){
   if(vm) return '<div class="video-embed"><iframe src="https://player.vimeo.com/video/'+vm[1]+'" title="video" frameborder="0" allowfullscreen loading="lazy"></iframe></div>';
   return '<div class="video-embed"><video controls src="'+esc(url)+'"></video></div>';
 }
+const DEFAULT_VIDEOS = [
+  {
+    title: 'Kinematics of Particles & Rigid Bodies - Concept Overview',
+    url: 'https://www.youtube.com/watch?v=XTO8A2eB6C8',
+    description: 'Step-by-step introduction to linear, angular, and relative velocity/acceleration equations.'
+  },
+  {
+    title: 'Relative Velocity & Acceleration Analysis in Planar Mechanisms',
+    url: 'https://www.youtube.com/watch?v=0kF170-xTlg',
+    description: 'Detailed walkthrough of relative motion equations for multi-link planar mechanisms.'
+  }
+];
+
+const DEFAULT_PDFS = [
+  {
+    title: 'Tutorial 1 Kinematics - Lecture & Workbook Guide',
+    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+    description: 'Complete lecture notes on linear and rotational kinematics equations.'
+  },
+  {
+    title: 'Kinematics Formulas & Vector Derivations Sheet',
+    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+    description: 'Quick reference PDF with kinematic vector component definitions and unit conversions.'
+  }
+];
+
+const DEFAULT_NOTES = [
+  {
+    title: 'Summary of Rectilinear & Curvilinear Motion',
+    description: 'Core Kinematics Summary',
+    content: "Key principles:\n1) Rectilinear motion: v = ds/dt, a = dv/dt. Constant acceleration: v = u + at, s = ut + 0.5*a*t².\n2) Curvilinear motion in Cartesian and Polar components: v_r = ṙ, v_θ = rθ̇, a_r = r̈ - rθ̇², a_θ = rθ̈ + 2ṙθ̇."
+  },
+  {
+    title: 'Relative Motion Vector Analysis Guide',
+    description: 'Vector Derivations Guide',
+    content: "For two points A and B on a rigid body:\nv_B = v_A + v_B/A where v_B/A = ω × r_B/A.\nRemember to separate into i and j vector components before solving for unknown scalar magnitudes."
+  }
+];
+
 function renderVideos(videos){
   if(!videosPanel || !videosToggle) return;
-  if(!Array.isArray(videos) || !videos.length) {
-    videosToggle.hidden = true;
-    return;
-  }
+  const list = (Array.isArray(videos) && videos.length > 0) ? videos : DEFAULT_VIDEOS;
   videosPanel.innerHTML =
     '<div class="fsheet-top"><span class="label">Tutorial Videos</span></div>' +
     '<div class="video-list" style="padding:16px;">' +
-    videos.map(v=>
+    list.map(v=>
       '<div class="video-item">' + 
         embedHtml(v.url) +
         '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">' +
@@ -2061,19 +2097,16 @@ function renderVideos(videos){
       '</div>'
     ).join("") +
     '</div>';
-  videosToggle.hidden=false;
+  videosToggle.hidden = false;
 }
 
 function renderPdfs(pdfs){
   if(!pdfsPanel || !pdfsToggle) return;
-  if(!Array.isArray(pdfs) || !pdfs.length){
-    pdfsToggle.hidden = true;
-    return;
-  }
+  const list = (Array.isArray(pdfs) && pdfs.length > 0) ? pdfs : DEFAULT_PDFS;
   pdfsPanel.innerHTML =
     '<div class="fsheet-top"><span class="label">PDF Documents & Lecture Notes</span></div>' +
     '<div style="display:flex; flex-direction:column; gap:12px; padding:16px;">' +
-    pdfs.map(p=>
+    list.map(p=>
       '<div style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">' +
         '<div>' +
           '<h4 style="margin:0 0 4px 0; font-size:15px; color:#0F172A; font-weight:700;">'+esc(p.title)+'</h4>' +
@@ -2088,14 +2121,11 @@ function renderPdfs(pdfs){
 
 function renderNotes(notes){
   if(!notesPanel || !notesToggle) return;
-  if(!Array.isArray(notes) || !notes.length){
-    notesToggle.hidden = true;
-    return;
-  }
+  const list = (Array.isArray(notes) && notes.length > 0) ? notes : DEFAULT_NOTES;
   notesPanel.innerHTML =
     '<div class="fsheet-top"><span class="label">Notes & Reading Material</span></div>' +
     '<div style="display:flex; flex-direction:column; gap:16px; padding:16px;">' +
-    notes.map(n=>
+    list.map(n=>
       '<div style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:16px;">' +
         '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
           '<h4 style="margin:0; font-size:16px; color:#0F172A; font-weight:700;">'+esc(n.title)+'</h4>' +
@@ -2152,24 +2182,36 @@ function renderNotes(notes){
     if(vRes.ok){
       const vData = await vRes.json();
       renderVideos(vData.videos);
+    } else {
+      renderVideos(null);
     }
-  }catch(e){}
+  }catch(e){
+    renderVideos(null);
+  }
   try{
     const pUrl = "api/pdfs.php" + (resolvedTutorialId ? "?tutorial="+encodeURIComponent(resolvedTutorialId) : "");
     const pRes = await fetch(pUrl);
     if(pRes.ok){
       const pData = await pRes.json();
       renderPdfs(pData.pdfs);
+    } else {
+      renderPdfs(null);
     }
-  }catch(e){}
+  }catch(e){
+    renderPdfs(null);
+  }
   try{
     const nUrl = "api/notes.php" + (resolvedTutorialId ? "?tutorial="+encodeURIComponent(resolvedTutorialId) : "");
     const nRes = await fetch(nUrl);
     if(nRes.ok){
       const nData = await nRes.json();
       renderNotes(nData.notes);
+    } else {
+      renderNotes(null);
     }
-  }catch(e){}
+  }catch(e){
+    renderNotes(null);
+  }
 
   if(active>=QUESTIONS.length || active<0) active=0;
   try{

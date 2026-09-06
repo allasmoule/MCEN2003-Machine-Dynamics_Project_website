@@ -11,4 +11,19 @@ $stmt = db()->prepare('SELECT title, url, description FROM videos WHERE tutorial
 $stmt->execute([$tutorialId]);
 $videos = $stmt->fetchAll();
 
+if (empty($videos)) {
+    $videos = [
+        [
+            'title' => 'Kinematics of Particles & Rigid Bodies - Concept Overview',
+            'url' => 'https://www.youtube.com/watch?v=XTO8A2eB6C8',
+            'description' => 'Step-by-step introduction to linear, angular, and relative velocity/acceleration equations.'
+        ],
+        [
+            'title' => 'Relative Velocity & Acceleration Analysis in Planar Mechanisms',
+            'url' => 'https://www.youtube.com/watch?v=0kF170-xTlg',
+            'description' => 'Detailed walkthrough of relative motion equations for multi-link planar mechanisms.'
+        ]
+    ];
+}
+
 json_response(['videos' => $videos]);
