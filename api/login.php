@@ -22,7 +22,7 @@ if (strcasecmp($email, ADMIN_EMAIL) === 0 || strcasecmp($email, 'raju.ahamedruet
         session_regenerate_id(true);
         $_SESSION['is_admin'] = true;
         $_SESSION['user_id'] = 999;
-        $_SESSION['user_name'] = 'Prof. Raju Ahamed';
+        $_SESSION['user_name'] = 'Dr. Raju Ahamed';
         $_SESSION['user_email'] = ADMIN_EMAIL;
         json_response(['ok' => true, 'admin' => true]);
     } else {

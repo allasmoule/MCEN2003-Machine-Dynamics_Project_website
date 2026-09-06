@@ -2273,7 +2273,7 @@ function renderNotes(notes){
         const subjEl=document.getElementById("tutSubject"), titleEl=document.getElementById("tutTitle");
         if(subjEl && data.tutorial.subject_name) subjEl.textContent=data.tutorial.subject_name;
         if(titleEl && data.tutorial.title) titleEl.textContent=data.tutorial.title;
-        document.title = data.tutorial.title + " — " + data.tutorial.subject_name + " | Prof. Raju Ahamed";
+        document.title = data.tutorial.title + " — " + data.tutorial.subject_name + " | Dr. Raju Ahamed";
       }
     }
   }catch(e){

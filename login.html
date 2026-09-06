@@ -157,7 +157,7 @@ img { max-width: 100%; }
 
 <header class="p-header">
   <div class="p-header-in">
-    <a href="index.html" class="p-brand">Prof. Raju Ahamed</a>
+    <a href="index.html" class="p-brand">Dr. Raju Ahamed</a>
     <button class="p-hamburger" id="pMobileToggle" aria-label="Open menu" aria-expanded="false">
       <span></span>
       <span></span>
@@ -309,7 +309,7 @@ img { max-width: 100%; }
       password: pass
     }).then(function (body) {
       if (body.admin || isAdminEmail) {
-        try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Raju Ahamed (Admin)', email: email, isAdmin: true })); } catch (ex) {}
+        try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Dr. Raju Ahamed (Admin)', email: email, isAdmin: true })); } catch (ex) {}
         showMsg('Logged in as admin — redirecting…', 'ok');
         location.replace('admin/index.php');
         return;
@@ -335,7 +335,7 @@ img { max-width: 100%; }
       // Static fallback when server API is offline or running on static preview
       if (isAdminEmail) {
         if (pass === 'Admin@@@@!!!!' || pass === 'admin' || pass === '123456') {
-          try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Raju Ahamed (Admin)', email: email, isAdmin: true })); } catch (ex) {}
+          try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Dr. Raju Ahamed (Admin)', email: email, isAdmin: true })); } catch (ex) {}
           showMsg('Logged in as admin — redirecting…', 'ok');
           setTimeout(function () { location.replace('admin/index.php'); }, 300);
         } else {

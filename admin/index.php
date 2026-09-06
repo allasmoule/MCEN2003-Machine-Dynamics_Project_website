@@ -21,7 +21,7 @@ try {
     $users = db()->query('SELECT id, name, email, phone, batch, created_at FROM users ORDER BY created_at DESC')->fetchAll();
 } catch (Throwable $e) {
     $users = [
-        ['id' => 1, 'name' => 'Prof. Raju Ahamed', 'email' => 'Raju.ahamedruet07@gmail.com', 'phone' => 'N/A', 'batch' => 'Faculty', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 1, 'name' => 'Dr. Raju Ahamed', 'email' => 'Raju.ahamedruet07@gmail.com', 'phone' => 'N/A', 'batch' => 'Faculty', 'created_at' => date('Y-m-d H:i:s')],
         ['id' => 2, 'name' => 'Demo Student', 'email' => 'demo@mcen2003.local', 'phone' => '0000000000', 'batch' => '2023', 'created_at' => date('Y-m-d H:i:s')],
     ];
 }
