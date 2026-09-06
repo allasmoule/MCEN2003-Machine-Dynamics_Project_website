@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Subject | Prof. Md. Roju Ahomed</title>
+<title>Subject | Prof. Raju Ahamed</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
@@ -22,7 +22,7 @@ img { max-width: 100%; }
 
 <header class="p-header">
   <div class="p-header-in">
-    <a href="index.html" class="p-brand">Prof. Md. Roju Ahomed</a>
+    <a href="index.html" class="p-brand">Prof. Raju Ahamed</a>
     <button class="p-hamburger" id="pMobileToggle" aria-label="Open menu" aria-expanded="false">
       <span></span>
       <span></span>
@@ -61,7 +61,7 @@ img { max-width: 100%; }
 
 <footer class="p-footer" id="contact">
   <div class="p-footer-in">
-    <p class="p-copy">&copy; 2025 Md. Roju Ahomed. All Rights Reserved.</p>
+    <p class="p-copy">&copy; 2025 Raju Ahamed. All Rights Reserved.</p>
   </div>
 </footer>
 
@@ -71,7 +71,7 @@ img { max-width: 100%; }
   var slug = new URLSearchParams(location.search).get('slug') || 'mcen2003';
 
   function renderData(subject, tutorials) {
-    document.title = subject.name + ' | Prof. Md. Roju Ahomed';
+    document.title = subject.name + ' | Prof. Raju Ahamed';
     document.querySelector('#subjHero .p-tag').textContent = subject.institution || 'Subject';
     document.getElementById('subjName').textContent = subject.name;
     document.getElementById('subjDesc').textContent = subject.description || '';

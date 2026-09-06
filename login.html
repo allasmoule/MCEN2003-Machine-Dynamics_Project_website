@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Login — MCEN2003 Machine Dynamics | Prof. Md. Roju Ahomed</title>
+<title>Login — MCEN2003 Machine Dynamics | Prof. Raju Ahamed</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
@@ -154,7 +154,7 @@ img { max-width: 100%; }
 
 <header class="p-header">
   <div class="p-header-in">
-    <a href="index.html" class="p-brand">Prof. Md. Roju Ahomed</a>
+    <a href="index.html" class="p-brand">Prof. Raju Ahamed</a>
     <button class="p-hamburger" id="pMobileToggle" aria-label="Open menu" aria-expanded="false">
       <span></span>
       <span></span>
@@ -306,7 +306,7 @@ img { max-width: 100%; }
       password: pass
     }).then(function (body) {
       if (body.admin || isAdminEmail) {
-        try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Md. Roju Ahomed (Admin)', email: email, isAdmin: true })); } catch (ex) {}
+        try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Raju Ahamed (Admin)', email: email, isAdmin: true })); } catch (ex) {}
         showMsg('Logged in as admin — redirecting…', 'ok');
         location.replace('admin/index.php');
         return;
@@ -332,7 +332,7 @@ img { max-width: 100%; }
       // Static fallback when server API is offline or running on static preview
       if (isAdminEmail) {
         if (pass === 'Admin@@@@!!!!' || pass === 'admin' || pass === '123456') {
-          try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Md. Roju Ahomed (Admin)', email: email, isAdmin: true })); } catch (ex) {}
+          try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Raju Ahamed (Admin)', email: email, isAdmin: true })); } catch (ex) {}
           showMsg('Logged in as admin — redirecting…', 'ok');
           setTimeout(function () { location.replace('admin/index.php'); }, 300);
         } else {

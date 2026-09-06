@@ -298,7 +298,7 @@ app.post('/api/login.php', (req, res) => {
   const adminEmails = ['raju.ahamedruet07@gmail.com', 'admin@mcen2003.local', 'admin@example.com', 'your-admin-email@example.com'];
   if (adminEmails.includes(cleanEmail) && (password === 'Admin@@@@!!!!' || password === 'admin123' || password === 'your-new-password')) {
     const token = 'admin_token_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
-    db.prepare('INSERT INTO sessions (token, user_id, user_name, user_email, is_admin) VALUES (?, ?, ?, ?, ?)').run(token, 0, 'Prof. Md. Roju Ahomed', cleanEmail, 1);
+    db.prepare('INSERT INTO sessions (token, user_id, user_name, user_email, is_admin) VALUES (?, ?, ?, ?, ?)').run(token, 0, 'Prof. Raju Ahamed', cleanEmail, 1);
     res.cookie('session_token', token, { httpOnly: true });
     return res.json({ ok: true, admin: true });
   }
