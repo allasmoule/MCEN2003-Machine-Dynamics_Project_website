@@ -326,7 +326,7 @@ img { max-width: 100%; }
         if (pass === 'Admin@@@@!!!!' || pass === 'admin' || pass === '123456') {
           try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Md. Roju Ahomed (Admin)', email: email, isAdmin: true })); } catch (ex) {}
           showMsg('Logged in as admin — redirecting…', 'ok');
-          setTimeout(function () { location.replace('admin/index.html'); }, 300);
+          setTimeout(function () { location.replace('admin/index.php'); }, 300);
         } else {
           showMsg('Incorrect password for admin account.', 'error');
         }
