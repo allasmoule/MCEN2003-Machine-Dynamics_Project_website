@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Panel — MCEN2003 Machine Dynamics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <div class="admin-brand">
+      <span class="admin-brand-mark">Admin</span>
+      <span class="admin-brand-sub">MCEN2003 Machine Dynamics</span>
+    </div>
+    <nav class="admin-nav">
+      <a href="#students" class="active" id="navStudents">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Students
+      </a>
+      <a href="#subjects" id="navSubjects">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+        Subjects
+      </a>
+      <a href="#formula" id="navFormula">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2h10v12H3z"/><path d="M5.2 5h5.6M5.2 8h5.6M5.2 11h3.2"/></svg>
+        Formula Sheet
+      </a>
+    </nav>
+    <a class="admin-logout" href="../index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      Back to Website
+    </a>
+  </aside>
+
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <div>
+        <h1 id="pageTitle">Students</h1>
+      </div>
+    </header>
+    <main class="admin-content" id="adminContent">
+      <div class="toolbar">
+        <span class="meta">Registered Students</span>
+        <input type="text" id="search" placeholder="Search name, email, batch&hellip;" style="max-width:260px">
+      </div>
+      <table id="userTable">
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Role</th><th>Registered</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Prof. Md. Roju Ahomed</td>
+            <td>Raju.ahamedruet07@gmail.com</td>
+            <td>Administrator</td>
+            <td>2025-01-01</td>
+          </tr>
+          <tr>
+            <td>Demo Student</td>
+            <td>demo@mcen2003.local</td>
+            <td>Student</td>
+            <td>Recent</td>
+          </tr>
+        </tbody>
+      </table>
+    </main>
+  </div>
+</div>
+
+<script>
+(function() {
+  var titleEl = document.getElementById('pageTitle');
+  var contentEl = document.getElementById('adminContent');
+
+  var navStudents = document.getElementById('navStudents');
+  var navSubjects = document.getElementById('navSubjects');
+  var navFormula = document.getElementById('navFormula');
+
+  function setTab(which) {
+    navStudents.classList.toggle('active', which === 'students');
+    navSubjects.classList.toggle('active', which === 'subjects');
+    navFormula.classList.toggle('active', which === 'formula');
+
+    if (which === 'students') {
+      titleEl.textContent = 'Students';
+      contentEl.innerHTML = '<div class="toolbar"><span class="meta">Registered Students</span><input type="text" id="search" placeholder="Search name, email, batch&hellip;" style="max-width:260px"></div>' +
+        '<table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead><tbody>' +
+        '<tr><td>Prof. Md. Roju Ahomed</td><td>Raju.ahamedruet07@gmail.com</td><td>Administrator</td><td><span class="badge" style="background:#E0F0E6;color:#2B7A51;padding:3px 8px;border-radius:4px;font-size:12px">Active</span></td></tr>' +
+        '<tr><td>Demo Student</td><td>demo@mcen2003.local</td><td>Student</td><td><span class="badge" style="background:#E0EEF3;color:#0F5F7D;padding:3px 8px;border-radius:4px;font-size:12px">Demo</span></td></tr>' +
+        '</tbody></table>';
+    } else if (which === 'subjects') {
+      titleEl.textContent = 'Subjects';
+      contentEl.innerHTML = '<div class="toolbar"><span class="meta">Subject Catalog</span></div>' +
+        '<table><thead><tr><th>Subject</th><th>Institution</th><th>Tutorials</th></tr></thead><tbody>' +
+        '<tr><td>MCEN2003 Machine Dynamics</td><td>Curtin University</td><td>1 Tutorial (Kinematics)</td></tr>' +
+        '</tbody></table>';
+    } else if (which === 'formula') {
+      titleEl.textContent = 'Formula Sheet';
+      contentEl.innerHTML = '<div class="toolbar"><span class="meta">Exam Kinematics Formula Sheet</span></div>' +
+        '<div style="background:#FFF;padding:20px;border-radius:8px;border:1px solid #E2E8F0">' +
+        '<h3>Linear & Rotational Kinematics</h3>' +
+        '<p>v = ds/dt | a = dv/dt | ω = dθ/dt | α = dω/dt | v = rω | a_t = rα | a_n = rω²</p>' +
+        '</div>';
+    }
+  }
+
+  navStudents.addEventListener('click', function(e) { e.preventDefault(); setTab('students'); });
+  navSubjects.addEventListener('click', function(e) { e.preventDefault(); setTab('subjects'); });
+  navFormula.addEventListener('click', function(e) { e.preventDefault(); setTab('formula'); });
+})();
+</script>
+</body>
+</html>
