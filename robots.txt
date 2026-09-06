@@ -1,2 +1,7 @@
 User-agent: *
-Disallow: /
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /db/
+
+Sitemap: https://mcen2003-machinedynamics.curtin.edu.au/sitemap.xml
