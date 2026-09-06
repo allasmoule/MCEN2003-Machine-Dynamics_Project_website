@@ -6,23 +6,23 @@
       "use": "@vercel/node"
     },
     {
-      "src": "*.html",
+      "src": "**/*.html",
       "use": "@vercel/static"
     },
     {
-      "src": "*.css",
+      "src": "**/*.css",
       "use": "@vercel/static"
     },
     {
-      "src": "*.js",
+      "src": "**/*.js",
       "use": "@vercel/static"
     },
     {
-      "src": "*.jpg",
+      "src": "**/*.jpg",
       "use": "@vercel/static"
     },
     {
-      "src": "*.png",
+      "src": "**/*.png",
       "use": "@vercel/static"
     }
   ],
@@ -30,6 +30,14 @@
     {
       "src": "/api/(.*)",
       "dest": "server.js"
+    },
+    {
+      "src": "/admin/admin.css",
+      "dest": "/admin/admin.css"
+    },
+    {
+      "src": "/admin/index.html",
+      "dest": "/admin/index.html"
     },
     {
       "src": "/admin/index.php",
