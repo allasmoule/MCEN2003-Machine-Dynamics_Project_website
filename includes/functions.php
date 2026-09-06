@@ -22,7 +22,13 @@ function json_response(array $data, int $status = 200): void {
 function read_json_body(): array {
     $raw = file_get_contents('php://input');
     $data = json_decode($raw, true);
-    return is_array($data) ? $data : [];
+    if (is_array($data) && !empty($data)) {
+        return $data;
+    }
+    if (!empty($_POST)) {
+        return $_POST;
+    }
+    return [];
 }
 
 function current_user(): ?array {

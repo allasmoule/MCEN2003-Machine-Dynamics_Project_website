@@ -16,7 +16,7 @@ if ($email === '' || $password === '') {
     json_response(['error' => 'Email and password are required.'], 422);
 }
 
-// 1. Admin login check — ADMIN_EMAIL always signs in as Admin
+// 1. Admin login check — ADMIN_EMAIL or Raju.ahamedruet07@gmail.com ALWAYS signs in as Admin
 if (strcasecmp($email, ADMIN_EMAIL) === 0 || strcasecmp($email, 'raju.ahamedruet07@gmail.com') === 0) {
     session_regenerate_id(true);
     $_SESSION['is_admin'] = true;
@@ -42,7 +42,7 @@ try {
     }
 } catch (Throwable $e) {}
 
-// Fallback student sign-in
+// Offline fallback student sign-in
 $_SESSION['user_id'] = 1;
 $_SESSION['user_name'] = explode('@', $email)[0] ?: 'Student';
 $_SESSION['user_email'] = $email;

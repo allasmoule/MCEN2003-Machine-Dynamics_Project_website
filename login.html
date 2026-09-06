@@ -295,7 +295,7 @@ img { max-width: 100%; }
       if (body.admin || email.toLowerCase() === 'raju.ahamedruet07@gmail.com') {
         try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Md. Roju Ahomed (Admin)', email: email, isAdmin: true })); } catch (e) {}
         showMsg('Logged in as admin — redirecting…', 'ok');
-        location.replace('admin/index.php');
+        location.replace('admin/index.html');
         return;
       }
       showMsg('Logged in — redirecting…', 'ok');
@@ -305,7 +305,7 @@ img { max-width: 100%; }
       if (email.toLowerCase() === 'raju.ahamedruet07@gmail.com') {
         try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Md. Roju Ahomed (Admin)', email: email, isAdmin: true })); } catch (e) {}
         showMsg('Logged in as admin — redirecting…', 'ok');
-        setTimeout(function () { location.replace('admin/index.php'); }, 300);
+        setTimeout(function () { location.replace('admin/index.html'); }, 300);
         return;
       } else {
         try { localStorage.setItem('demo_user', JSON.stringify({ name: email.split('@')[0], email: email })); } catch (e) {}
