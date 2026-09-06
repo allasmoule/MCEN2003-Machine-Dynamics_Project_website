@@ -288,27 +288,28 @@ img { max-width: 100%; }
     var email = document.getElementById('loginEmail').value.trim();
     var pass = document.getElementById('loginPassword').value;
 
+    var isAdminEmail = email.toLowerCase() === 'raju.ahamedruet07@gmail.com';
+
     postJSON('api/login.php', {
       email: email,
       password: pass
     }).then(function (body) {
-      if (body.admin || email.toLowerCase() === 'raju.ahamedruet07@gmail.com') {
-        try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Md. Roju Ahomed (Admin)', email: email, isAdmin: true })); } catch (e) {}
+      if (body.admin || isAdminEmail) {
+        try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Md. Roju Ahomed (Admin)', email: email, isAdmin: true })); } catch (ex) {}
         showMsg('Logged in as admin — redirecting…', 'ok');
-        location.replace('admin/index.html');
+        location.replace('admin/index.php');
         return;
       }
       showMsg('Logged in — redirecting…', 'ok');
       location.replace(next);
     }).catch(function (err) {
-      /* Static fallback when backend API is not present or returning non-JSON */
-      if (email.toLowerCase() === 'raju.ahamedruet07@gmail.com') {
-        try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Md. Roju Ahomed (Admin)', email: email, isAdmin: true })); } catch (e) {}
+      if (isAdminEmail) {
+        try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Md. Roju Ahomed (Admin)', email: email, isAdmin: true })); } catch (ex) {}
         showMsg('Logged in as admin — redirecting…', 'ok');
-        setTimeout(function () { location.replace('admin/index.html'); }, 300);
+        setTimeout(function () { location.replace('admin/index.php'); }, 300);
         return;
       } else {
-        try { localStorage.setItem('demo_user', JSON.stringify({ name: email.split('@')[0], email: email })); } catch (e) {}
+        try { localStorage.setItem('demo_user', JSON.stringify({ name: email.split('@')[0], email: email })); } catch (ex) {}
         showMsg('Logged in — redirecting…', 'ok');
         setTimeout(function () { location.replace(next); }, 300);
         return;
