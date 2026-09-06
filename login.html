@@ -303,16 +303,28 @@ img { max-width: 100%; }
       showMsg('Logged in — redirecting…', 'ok');
       location.replace(next);
     }).catch(function (err) {
-      if (isAdminEmail) {
-        try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Md. Roju Ahomed (Admin)', email: email, isAdmin: true })); } catch (ex) {}
-        showMsg('Logged in as admin — redirecting…', 'ok');
-        setTimeout(function () { location.replace('admin/index.php'); }, 300);
+      btn.disabled = false;
+      var errText = err && err.message ? err.message : '';
+      var isRealBackendError = errText && errText !== 'API unavailable' && errText !== 'OK_NON_JSON' && !errText.includes('Failed to fetch');
+
+      if (isRealBackendError) {
+        showMsg(errText, 'error');
         return;
+      }
+
+      // Static fallback when server API is offline or running on static preview
+      if (isAdminEmail) {
+        if (pass === 'Admin@@@@!!!!' || pass === 'admin' || pass === '123456') {
+          try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Prof. Md. Roju Ahomed (Admin)', email: email, isAdmin: true })); } catch (ex) {}
+          showMsg('Logged in as admin — redirecting…', 'ok');
+          setTimeout(function () { location.replace('admin/index.html'); }, 300);
+        } else {
+          showMsg('Incorrect password for admin account.', 'error');
+        }
       } else {
-        try { localStorage.setItem('demo_user', JSON.stringify({ name: email.split('@')[0], email: email })); } catch (ex) {}
+        try { localStorage.setItem('demo_user', JSON.stringify({ name: email.split('@')[0] || 'Student', email: email })); } catch (ex) {}
         showMsg('Logged in — redirecting…', 'ok');
         setTimeout(function () { location.replace(next); }, 300);
-        return;
       }
     });
   });

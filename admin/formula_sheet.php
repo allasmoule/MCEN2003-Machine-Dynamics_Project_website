@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $value = ['heading' => $heading, 'subheading' => $subheading, 'boxes' => $boxes];
     $saveKey = $tutId ? 'formula_sheet_t' . $tutId : 'formula_sheet';
 
-    $stmt = $pdo->prepare('INSERT INTO content_blocks (block_key, value_json) VALUES (?, ?) ON DUPLICATE KEY UPDATE value_json = VALUES(value_json)');
+    $stmt = $pdo->prepare('REPLACE INTO content_blocks (block_key, value_json) VALUES (?, ?)');
     $stmt->execute([$saveKey, json_encode($value)]);
 
     header('Location: formula_sheet.php?subject_id=' . $subId . '&tutorial_id=' . $tutId . '&saved=1');
