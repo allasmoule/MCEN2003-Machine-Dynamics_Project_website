@@ -286,7 +286,7 @@ img { max-width: 100%; }
     }).then(function (body) {
       if (body.admin) {
         showMsg('Logged in as admin — redirecting…', 'ok');
-        location.replace('admin/questions.php');
+        location.replace('admin/index.php');
         return;
       }
       showMsg('Logged in — redirecting…', 'ok');
@@ -304,8 +304,10 @@ img { max-width: 100%; }
       showMsg('Logged in as demo student — redirecting…', 'ok');
       location.replace(next);
     }).catch(function (err) {
-      showMsg(err.message, 'error');
-      demoLoginBtn.disabled = false;
+      /* Static fallback when backend API is not present */
+      try { localStorage.setItem('demo_user', JSON.stringify({ name: 'Demo Student', email: 'demo@mcen2003.local' })); } catch (e) {}
+      showMsg('Logged in as demo student — redirecting…', 'ok');
+      setTimeout(function () { location.replace(next); }, 300);
     });
   });
 

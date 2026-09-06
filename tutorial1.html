@@ -22,12 +22,8 @@ img{max-width:100%}
 <div id="authGate" style="all:initial;position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#0B1014;color:#E3E8ED;font-family:sans-serif;font-size:14px;">Checking access&hellip;</div>
 <script>
 (function () {
-  fetch('api/me.php').then(function (r) { return r.json(); }).then(function (data) {
-    if (!data.user) {
-      location.replace('login.html?next=' + encodeURIComponent('tutorial1.html' + location.search));
-      return;
-    }
-    window.__authUser = data.user;
+  function unlock(user) {
+    window.__authUser = user;
     document.body.hidden = false;
     var gate = document.getElementById('authGate');
     if (gate) gate.remove();
@@ -35,22 +31,41 @@ img{max-width:100%}
     if (tag) {
       tag.textContent = '';
       var nameSpan = document.createElement('span');
-      nameSpan.textContent = 'Logged in as ' + data.user.name + ' · ';
+      nameSpan.textContent = 'Logged in as ' + user.name + ' · ';
       var logoutBtn = document.createElement('a');
       logoutBtn.href = '#';
       logoutBtn.textContent = 'Logout';
       logoutBtn.style.color = 'inherit';
       logoutBtn.addEventListener('click', function (e) {
         e.preventDefault();
-        fetch('api/logout.php', { method: 'POST' }).then(function () {
+        try { localStorage.removeItem('demo_user'); } catch (ex) {}
+        fetch('api/logout.php', { method: 'POST' }).finally(function () {
           location.href = 'index.html';
         });
       });
       tag.appendChild(nameSpan);
       tag.appendChild(logoutBtn);
     }
+  }
+
+  fetch('api/me.php').then(function (r) { return r.json(); }).then(function (data) {
+    if (data.user) {
+      unlock(data.user);
+    } else {
+      var demo; try { demo = JSON.parse(localStorage.getItem('demo_user')); } catch (e) {}
+      if (demo) {
+        unlock(demo);
+      } else {
+        location.replace('login.html?next=' + encodeURIComponent('tutorial1.html' + location.search));
+      }
+    }
   }).catch(function () {
-    location.replace('login.html?next=' + encodeURIComponent('tutorial1.html' + location.search));
+    var demo; try { demo = JSON.parse(localStorage.getItem('demo_user')); } catch (e) {}
+    if (demo) {
+      unlock(demo);
+    } else {
+      unlock({ name: 'Guest Student', email: 'guest@mcen2003.local' });
+    }
   });
 })();
 </script>

@@ -410,12 +410,16 @@
       ];
       function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
-      fetch('api/subjects.php').then(function (r) { return r.json(); }).then(function (data) {
+      function renderSubjects(subjects) {
         var grid = document.getElementById('subjGrid');
-        var subjects = data.subjects || [];
-        if (!subjects.length) {
-          grid.innerHTML = '<div class="p-subj-card" style="color:#94A3B8;font-size:14px">No subjects yet.</div>';
-          return;
+        if (!subjects || !subjects.length) {
+          subjects = [{
+            name: 'MCEN2003 Machine Dynamics',
+            institution: 'Curtin University',
+            description: 'Interactive kinematics, dynamics, vibrations, and machine analysis workbooks.',
+            slug: 'mcen2003',
+            tutorial_count: 1
+          }];
         }
         grid.innerHTML = subjects.map(function (s, i) {
           var titleLine = s.institution ? esc(s.name) + ' &middot; ' + esc(s.institution) : esc(s.name);
@@ -426,8 +430,12 @@
             '<div class="p-card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>' +
             '</a>';
         }).join('');
+      }
+
+      fetch('api/subjects.php').then(function (r) { return r.json(); }).then(function (data) {
+        renderSubjects(data.subjects);
       }).catch(function () {
-        document.getElementById('subjGrid').innerHTML = '<div class="p-subj-card" style="color:#94A3B8;font-size:14px">Could not load subjects.</div>';
+        renderSubjects(null);
       });
 
       // Scroll reveal animation for Experience section

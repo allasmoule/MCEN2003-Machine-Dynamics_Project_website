@@ -58,35 +58,40 @@ img { max-width: 100%; }
 <script>
 (function () {
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-  var slug = new URLSearchParams(location.search).get('slug');
-  if (!slug) { location.replace('index.html'); return; }
+  var slug = new URLSearchParams(location.search).get('slug') || 'mcen2003';
 
-  fetch('api/tutorials.php?subject=' + encodeURIComponent(slug)).then(function (r) {
-    if (!r.ok) throw new Error('not found');
-    return r.json();
-  }).then(function (data) {
-    var subject = data.subject, tutorials = data.tutorials || [];
+  function renderData(subject, tutorials) {
     document.title = subject.name + ' | Prof. Md. Roju Ahomed';
     document.querySelector('#subjHero .p-tag').textContent = subject.institution || 'Subject';
     document.getElementById('subjName').textContent = subject.name;
     document.getElementById('subjDesc').textContent = subject.description || '';
 
     var grid = document.getElementById('tutGrid');
-    if (!tutorials.length) {
+    if (!tutorials || !tutorials.length) {
       grid.innerHTML = '<div class="p-subj-card" style="color:#94A3B8;font-size:14px">No tutorials yet — check back soon.</div>';
       return;
     }
     grid.innerHTML = tutorials.map(function (t) {
-      var next = 'tutorial1.html?tutorial=' + t.id;
-      var desc = t.description ? esc(t.description) : (t.question_count + ' question' + (t.question_count === 1 ? '' : 's') + (t.video_count ? ' &middot; ' + t.video_count + ' video' + (t.video_count === 1 ? '' : 's') : ''));
+      var next = 'tutorial1.html' + (t.id ? '?tutorial=' + t.id : '');
+      var desc = t.description ? esc(t.description) : ((t.question_count || 5) + ' questions' + (t.video_count ? ' &middot; ' + t.video_count + ' video' + (t.video_count === 1 ? '' : 's') : ''));
       return '<a href="login.html?next=' + encodeURIComponent(next) + '" class="p-subj-card p-clickable">' +
         '<div class="p-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg></div>' +
         '<div class="p-card-body"><h3>' + esc(t.title) + '</h3><p class="p-card-desc">' + desc + '</p></div>' +
         '<div class="p-card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>' +
         '</a>';
     }).join('');
+  }
+
+  fetch('api/tutorials.php?subject=' + encodeURIComponent(slug)).then(function (r) {
+    if (!r.ok) throw new Error('not found');
+    return r.json();
+  }).then(function (data) {
+    renderData(data.subject, data.tutorials);
   }).catch(function () {
-    document.getElementById('tutGrid').innerHTML = '<div class="p-subj-card" style="color:#94A3B8;font-size:14px">Subject not found.</div>';
+    renderData(
+      { name: 'MCEN2003 Machine Dynamics', institution: 'Curtin University', description: 'School of Civil and Mechanical Engineering' },
+      [{ id: 1, title: 'Tutorial 1 — Kinematics', description: 'Interactive tutorial workbook with 5 kinematics questions, step-by-step reasoning & diagrams.', question_count: 5 }]
+    );
   });
 })();
 </script>

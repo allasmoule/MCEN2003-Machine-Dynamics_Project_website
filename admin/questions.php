@@ -8,6 +8,9 @@ require_admin();
 
 $pdo = db();
 $tutorialId = (int)($_GET['tutorial_id'] ?? 0);
+if (!$tutorialId) {
+    $tutorialId = (int)$pdo->query('SELECT id FROM tutorials ORDER BY sort_order ASC, id ASC LIMIT 1')->fetchColumn();
+}
 $stmt = $pdo->prepare('SELECT t.*, s.name AS subject_name FROM tutorials t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?');
 $stmt->execute([$tutorialId]);
 $tutorial = $stmt->fetch();
