@@ -253,6 +253,103 @@ function seedData() {
 
 seedData();
 
+// ------------------------------------------------------------
+// File-based tutorial content: seed/tutorials/*.json
+// Each file describes one tutorial (new, or an existing one by slug such as
+// "tutorial-1") and its questions, videos, PDFs, notes and formula sheet.
+// The files in git are the source of truth: questions are upserted by their
+// "id" (q_key), and videos / PDFs / notes are added when their title is new.
+// See .claude/skills/add-tutorial/SKILL.md for the file format.
+// ------------------------------------------------------------
+function seedTutorialFiles() {
+  const dir = path.join(__dirname, 'seed', 'tutorials');
+  if (!fs.existsSync(dir)) return;
+  const subj = db.prepare('SELECT id FROM subjects WHERE slug = ?').get('mcen2003-machine-dynamics');
+  if (!subj) return;
+
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json')).sort();
+  for (const file of files) {
+    let data;
+    try {
+      data = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+    } catch (e) {
+      console.error(`Skipping seed/tutorials/${file}: ${e.message}`);
+      continue;
+    }
+    if (!data.slug) {
+      console.error(`Skipping seed/tutorials/${file}: missing "slug"`);
+      continue;
+    }
+
+    let tut = db.prepare('SELECT id FROM tutorials WHERE subject_id = ? AND slug = ?').get(subj.id, data.slug);
+    if (!tut) {
+      if (!data.title) {
+        console.error(`Skipping seed/tutorials/${file}: new tutorial needs a "title"`);
+        continue;
+      }
+      const r = db.prepare('INSERT INTO tutorials (subject_id, slug, title, description, sort_order) VALUES (?, ?, ?, ?, ?)')
+        .run(subj.id, data.slug, data.title, data.description || null, data.sort_order || 0);
+      tut = { id: Number(r.lastInsertRowid) };
+    } else if (data.title) {
+      db.prepare('UPDATE tutorials SET title = ?, description = ?, sort_order = ? WHERE id = ?')
+        .run(data.title, data.description || null, data.sort_order || 0, tut.id);
+    }
+    const tid = tut.id;
+
+    let added = 0, updated = 0;
+    for (const q of data.questions || []) {
+      const vals = [
+        q.code, q.topic, q.title, q.statement,
+        q.sketch || null, q.fig || null, q.figCap || null,
+        JSON.stringify(q.given || []), JSON.stringify(q.hint || {}), q.seed || null,
+        JSON.stringify(q.parts || []), JSON.stringify(q.steps || []), q.original || '',
+      ];
+      const existing = db.prepare('SELECT id FROM questions WHERE tutorial_id = ? AND q_key = ?').get(tid, q.id);
+      if (existing) {
+        db.prepare(`UPDATE questions SET code = ?, topic = ?, title = ?, statement = ?, sketch = ?, fig = ?, fig_caption = ?,
+          given_json = ?, hint_json = ?, seed = ?, parts_json = ?, steps_json = ?, original = ? WHERE id = ?`)
+          .run(...vals, existing.id);
+        updated++;
+      } else {
+        const max = db.prepare('SELECT COALESCE(MAX(sort_order), 0) AS m FROM questions WHERE tutorial_id = ?').get(tid).m;
+        db.prepare(`INSERT INTO questions (tutorial_id, q_key, code, topic, title, statement, sketch, fig, fig_caption,
+          given_json, hint_json, seed, parts_json, steps_json, original, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .run(tid, q.id, ...vals, q.sort_order || max + 10);
+        added++;
+      }
+    }
+
+    const addByTitle = (table, cols, items) => {
+      let n = 0;
+      for (const it of items || []) {
+        if (!it.title) continue;
+        if (db.prepare(`SELECT id FROM ${table} WHERE tutorial_id = ? AND title = ?`).get(tid, it.title)) continue;
+        const max = db.prepare(`SELECT COALESCE(MAX(sort_order), 0) AS m FROM ${table} WHERE tutorial_id = ?`).get(tid).m;
+        db.prepare(`INSERT INTO ${table} (tutorial_id, ${cols.join(', ')}, sort_order) VALUES (?, ${cols.map(() => '?').join(', ')}, ?)`)
+          .run(tid, ...cols.map((c) => it[c] == null ? null : it[c]), it.sort_order || max + 10);
+        n++;
+      }
+      return n;
+    };
+    const v = addByTitle('videos', ['title', 'url', 'description'], data.videos);
+    const p = addByTitle('pdfs', ['title', 'url', 'description'], data.pdfs);
+    const n = addByTitle('notes', ['title', 'description', 'content'], data.notes);
+
+    if (data.formula_sheet) {
+      db.prepare(`INSERT INTO content_blocks (block_key, value_json) VALUES (?, ?)
+        ON CONFLICT(block_key) DO UPDATE SET value_json = excluded.value_json`)
+        .run('formula_sheet_t' + tid, JSON.stringify(data.formula_sheet));
+    }
+
+    if (added || v || p || n) {
+      console.log(`seed/tutorials/${file}: ${added} question(s) added, ${updated} updated, ${v} video(s), ${p} PDF(s), ${n} note(s).`);
+    }
+  }
+}
+
+seedTutorialFiles();
+
 // Helper to get session user
 function getSessionUser(req) {
   const token = req.cookies.session_token;

@@ -2,7 +2,8 @@
 Thumbs.db
 *.log
 config.php
-.claude/
+.claude/*
+!.claude/skills/
 node_modules/
 app.db
 
