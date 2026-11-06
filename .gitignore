@@ -1,9 +1,18 @@
 .DS_Store
 Thumbs.db
 *.log
-config.php
+/config.php
 .claude/*
 !.claude/skills/
 node_modules/
-app.db
+# old database location (moved to database/app.db)
+/app.db
+/app.db-*
+# database/app.db IS tracked (clean copy, rebuilt with: npm run db:build)
+database/*.db-*
+database/*.build*
+database/.app_secret
+# files uploaded from the admin panel stay on the server
+uploads/*
+!uploads/.htaccess
 

@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/admin_ui.php';
@@ -18,6 +18,7 @@ $stmt = $pdo->prepare('
            (SELECT COUNT(*) FROM questions q WHERE q.tutorial_id = t.id) AS question_count,
            (SELECT COUNT(*) FROM videos v WHERE v.tutorial_id = t.id) AS video_count,
            (SELECT COUNT(*) FROM pdfs p WHERE p.tutorial_id = t.id) AS pdf_count,
+           (SELECT COUNT(*) FROM slides sl WHERE sl.tutorial_id = t.id) AS slide_count,
            (SELECT COUNT(*) FROM notes n WHERE n.tutorial_id = t.id) AS note_count
     FROM tutorials t WHERE t.subject_id = ? ORDER BY t.sort_order ASC, t.id ASC
 ');
@@ -93,6 +94,18 @@ admin_page_start($subject['name'] . ' — Tutorials', 'subjects', 'subjects.php'
           <div style="display:flex; gap:6px;">
             <a href="pdf_form.php?tutorial_id=<?= (int)$t['id'] ?>" style="flex:1; text-align:center; background:#059669; color:#fff; padding:6px 8px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">+ Add PDF</a>
             <a href="pdfs.php?tutorial_id=<?= (int)$t['id'] ?>" style="text-align:center; background:#F1F5F9; color:#334155; padding:6px 10px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">Manage</a>
+          </div>
+        </div>
+
+        <!-- 3b. Slides -->
+        <div style="background:#fff; border:1px solid #E2E8F0; padding:12px; border-radius:8px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:700; font-size:13px; color:#1E293B;">Slides</span>
+            <span style="background:#ECFEFF; color:#0891B2; font-weight:700; font-size:11.5px; padding:2px 8px; border-radius:12px;"><?= (int)$t['slide_count'] ?></span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <a href="slide_form.php?tutorial_id=<?= (int)$t['id'] ?>" style="flex:1; text-align:center; background:#0891B2; color:#fff; padding:6px 8px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">+ Add Slides</a>
+            <a href="slides.php?tutorial_id=<?= (int)$t['id'] ?>" style="text-align:center; background:#F1F5F9; color:#334155; padding:6px 10px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">Manage</a>
           </div>
         </div>
 

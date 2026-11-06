@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/admin_ui.php';
@@ -37,12 +37,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mkdir($uploadDir, 0755, true);
         }
         $destPath = $uploadDir . $fileName;
-        if (move_uploaded_file($fileTmp, $destPath)) {
+        if (strtolower(pathinfo($fileName, PATHINFO_EXTENSION)) !== 'pdf') {
+            $error = 'Only .pdf files can be uploaded here.';
+        } elseif (move_uploaded_file($fileTmp, $destPath)) {
             $url = '/uploads/' . $fileName;
         }
     }
 
-    if ($title === '' || $url === '') {
+    if ($error !== '') {
+        // keep the upload error
+    } elseif ($title === '' || $url === '') {
         $error = 'Title and PDF File URL (or uploaded PDF file) are required.';
     } else {
         if ($p) {

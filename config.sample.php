@@ -1,8 +1,12 @@
 <?php
 /**
- * Copy this file to config.php and fill in your real cPanel MySQL credentials.
+ * Optional: copy this file to config.php to change settings. The site runs without it.
  * config.php is gitignored — never commit real credentials.
  */
+
+// Database: SQLite by default (database/app.db — nothing to set up).
+// Only to use MySQL instead, set DB_DRIVER to 'mysql' and fill in the four values below.
+define('DB_DRIVER', 'sqlite');
 
 // cPanel > MySQL Databases. Host is almost always "localhost" on shared hosting.
 define('DB_HOST', 'localhost');

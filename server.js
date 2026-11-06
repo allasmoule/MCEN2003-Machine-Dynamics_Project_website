@@ -11,8 +11,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Initialize SQLite database
-let dbPath = path.join(__dirname, 'app.db');
+// Initialize SQLite database — database/app.db is shared with the PHP backend
+// (includes/db.php). DB_PATH overrides it (used by scripts/build-db.js).
+const dbDir = path.join(__dirname, 'database');
+try { if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true }); } catch (e) {}
+const legacyDbPath = path.join(__dirname, 'app.db');
+let dbPath = process.env.DB_PATH || path.join(dbDir, 'app.db');
+if (!process.env.DB_PATH && !fs.existsSync(dbPath) && fs.existsSync(legacyDbPath)) {
+  // One-time move from the old location in the web root.
+  try { fs.renameSync(legacyDbPath, dbPath); } catch (e) { dbPath = legacyDbPath; }
+}
 if (process.env.VERCEL) {
   const tmpPath = path.join('/tmp', 'app.db');
   if (!fs.existsSync(tmpPath) && fs.existsSync(dbPath)) {
@@ -92,6 +100,17 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS pdfs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tutorial_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    url TEXT NOT NULL,
+    description TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tutorial_id) REFERENCES tutorials(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS slides (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tutorial_id INTEGER NOT NULL,
     title TEXT NOT NULL,
@@ -335,6 +354,7 @@ function seedTutorialFiles() {
     const v = addByTitle('videos', ['title', 'url', 'description'], data.videos);
     const p = addByTitle('pdfs', ['title', 'url', 'description'], data.pdfs);
     const n = addByTitle('notes', ['title', 'description', 'content'], data.notes);
+    const sl = addByTitle('slides', ['title', 'url', 'description'], data.slides);
 
     if (data.formula_sheet) {
       db.prepare(`INSERT INTO content_blocks (block_key, value_json) VALUES (?, ?)
@@ -342,13 +362,20 @@ function seedTutorialFiles() {
         .run('formula_sheet_t' + tid, JSON.stringify(data.formula_sheet));
     }
 
-    if (added || v || p || n) {
-      console.log(`seed/tutorials/${file}: ${added} question(s) added, ${updated} updated, ${v} video(s), ${p} PDF(s), ${n} note(s).`);
+    if (added || v || p || n || sl) {
+      console.log(`seed/tutorials/${file}: ${added} question(s) added, ${updated} updated, ${v} video(s), ${p} PDF(s), ${sl} slide deck(s), ${n} note(s).`);
     }
   }
 }
 
 seedTutorialFiles();
+
+// Module-level HTML escaper (some routes define their own local copy).
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 
 // Helper to get session user
 function getSessionUser(req) {
@@ -1161,6 +1188,14 @@ app.post('/admin/subject_delete.php', (req, res) => {
   if (!user || !user.is_admin) return res.redirect('/login.html');
   const id = parseInt(req.body.id, 10);
   if (id) {
+    const tuts = db.prepare('SELECT id FROM tutorials WHERE subject_id = ?').all(id);
+    for (const t of tuts) {
+      for (const tbl of ['questions', 'videos', 'pdfs', 'slides', 'notes']) {
+        db.prepare(`DELETE FROM ${tbl} WHERE tutorial_id = ?`).run(t.id);
+      }
+      db.prepare('DELETE FROM content_blocks WHERE block_key = ?').run('formula_sheet_t' + t.id);
+    }
+    db.prepare('DELETE FROM tutorials WHERE subject_id = ?').run(id);
     db.prepare('DELETE FROM subjects WHERE id = ?').run(id);
   }
   res.redirect('/admin/subjects.php');
@@ -1326,6 +1361,7 @@ app.get('/admin/tutorials.php', (req, res) => {
            (SELECT COUNT(*) FROM questions q WHERE q.tutorial_id = t.id) AS question_count,
            (SELECT COUNT(*) FROM videos v WHERE v.tutorial_id = t.id) AS video_count,
            (SELECT COUNT(*) FROM pdfs p WHERE p.tutorial_id = t.id) AS pdf_count,
+           (SELECT COUNT(*) FROM slides sl WHERE sl.tutorial_id = t.id) AS slide_count,
            (SELECT COUNT(*) FROM notes n WHERE n.tutorial_id = t.id) AS note_count
     FROM tutorials t WHERE t.subject_id = ? ORDER BY t.sort_order ASC, t.id ASC
   `).all(subjectId);
@@ -1381,6 +1417,18 @@ app.get('/admin/tutorials.php', (req, res) => {
           <div style="display:flex; gap:6px;">
             <a href="/admin/pdf_form.php?tutorial_id=${t.id}" style="flex:1; text-align:center; background:#059669; color:#fff; padding:6px 8px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">+ Add PDF</a>
             <a href="/admin/pdfs.php?tutorial_id=${t.id}" style="text-align:center; background:#F1F5F9; color:#334155; padding:6px 10px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">Manage</a>
+          </div>
+        </div>
+
+        <!-- 3b. Slides -->
+        <div style="background:#fff; border:1px solid #E2E8F0; padding:12px; border-radius:8px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:700; font-size:13px; color:#1E293B;">Slides</span>
+            <span style="background:#ECFEFF; color:#0891B2; font-weight:700; font-size:11.5px; padding:2px 8px; border-radius:12px;">${t.slide_count}</span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <a href="/admin/slide_form.php?tutorial_id=${t.id}" style="flex:1; text-align:center; background:#0891B2; color:#fff; padding:6px 8px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">+ Add Slides</a>
+            <a href="/admin/slides.php?tutorial_id=${t.id}" style="text-align:center; background:#F1F5F9; color:#334155; padding:6px 10px; border-radius:6px; font-size:11.5px; font-weight:600; text-decoration:none;">Manage</a>
           </div>
         </div>
 
@@ -1498,6 +1546,10 @@ app.post('/admin/tutorial_delete.php', (req, res) => {
   const subjectId = parseInt(req.body.subject_id, 10);
 
   if (id) {
+    for (const t of ['questions', 'videos', 'pdfs', 'slides', 'notes']) {
+      db.prepare(`DELETE FROM ${t} WHERE tutorial_id = ?`).run(id);
+    }
+    db.prepare('DELETE FROM content_blocks WHERE block_key = ?').run('formula_sheet_t' + id);
     db.prepare('DELETE FROM tutorials WHERE id = ?').run(id);
   }
 
@@ -2405,6 +2457,142 @@ app.post('/admin/pdf_delete.php', (req, res) => {
   res.redirect(`/admin/pdfs.php?tutorial_id=${tutorialId}`);
 });
 
+// Slides (Google Slides / PowerPoint / PDF decks) per tutorial
+app.get('/admin/slides.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const tutorial = db.prepare('SELECT t.*, s.name AS subject_name FROM tutorials t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?').get(tutorialId);
+  if (!tutorial) return res.redirect('/admin/subjects.php');
+
+  const slides = db.prepare('SELECT * FROM slides WHERE tutorial_id = ? ORDER BY sort_order ASC, id ASC').all(tutorialId);
+
+  let tableRows = slides.map(p => `
+    <tr style="border-bottom:1px solid #F1F5F9;">
+      <td style="padding:14px 16px; font-weight:600; color:#0F172A;">${escapeHtml(p.title)}</td>
+      <td style="padding:14px 16px;"><a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" style="color:#2563EB; font-weight:500; text-decoration:none;">Open slides &rarr;</a></td>
+      <td style="padding:14px 16px; color:#64748B; font-size:13px;">${escapeHtml(p.description || '—')}</td>
+      <td class="row-actions" style="padding:14px 16px; text-align:right;">
+        <a href="/admin/slide_form.php?tutorial_id=${tutorialId}&id=${p.id}" style="color:#475569; font-weight:600; text-decoration:none; margin-right:12px;">Edit</a>
+        <form method="post" action="/admin/slide_delete.php" style="display:inline; margin:0;" onsubmit="return confirm('Delete these slides?');">
+          <input type="hidden" name="id" value="${p.id}">
+          <input type="hidden" name="tutorial_id" value="${tutorialId}">
+          <button type="submit" style="color:#DC2626; background:transparent; border:none; cursor:pointer; font-weight:600; font-size:13px; padding:0;">Delete</button>
+        </form>
+      </td>
+    </tr>
+  `).join('');
+
+  const bodyHtml = `
+    <div style="margin-bottom:12px;"><a href="/admin/tutorials.php?subject_id=${tutorial.subject_id}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to ${tutorial.subject_name} tutorials</a></div>
+    <div class="toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div>
+        <h2 style="margin:0; font-size:18px; color:#1E293B; font-weight:700;">Slides for ${tutorial.title}</h2>
+        <span class="meta" style="color:#64748B; font-size:13px;">${slides.length} slide deck${slides.length === 1 ? '' : 's'} attached</span>
+      </div>
+      <a href="/admin/slide_form.php?tutorial_id=${tutorialId}" class="btn btn-primary" style="background:#0891B2; color:#fff; padding:9px 18px; border-radius:8px; text-decoration:none; font-weight:600; font-size:13.5px;">+ New Slides</a>
+    </div>
+    ${slides.length === 0 ? '<div class="empty" style="background:#fff; padding:40px; text-align:center; border-radius:12px; border:1px solid #E2E8F0; color:#64748B;">No slides added yet. Add a Google Slides, PowerPoint (.pptx) or PDF link.</div>' : `
+      <table style="width:100%; border-collapse:collapse; background:#fff; border:1px solid #E2E8F0; border-radius:10px; overflow:hidden;">
+        <thead>
+          <tr style="background:#F8FAFC; border-bottom:2px solid #E2E8F0; text-align:left; font-size:12.5px; color:#475569;">
+            <th style="padding:12px 16px;">Title</th>
+            <th style="padding:12px 16px;">Link / File</th>
+            <th style="padding:12px 16px;">Description</th>
+            <th style="padding:12px 16px; text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+    `}
+  `;
+
+  res.send(renderAdminLayout('Slides', 'subjects', bodyHtml));
+});
+
+app.get('/admin/slide_form.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const tutorial = db.prepare('SELECT t.*, s.name AS subject_name FROM tutorials t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?').get(tutorialId);
+  if (!tutorial) return res.redirect('/admin/subjects.php');
+
+  const id = parseInt(req.query.id, 10) || 0;
+  let p = null;
+  if (id) {
+    p = db.prepare('SELECT * FROM slides WHERE id = ? AND tutorial_id = ?').get(id, tutorialId);
+  }
+
+  const bodyHtml = `
+    <div style="margin-bottom:12px;"><a href="/admin/slides.php?tutorial_id=${tutorialId}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to slides</a></div>
+    <form method="post" action="/admin/slide_form.php?tutorial_id=${tutorialId}${id ? '&id=' + id : ''}" style="max-width:640px;">
+      <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:12px; padding:24px; margin-bottom:20px;">
+        <div class="field" style="margin-bottom:16px;">
+          <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">Slide Deck Title *</label>
+          <input type="text" name="title" value="${p ? escapeHtml(p.title || '') : ''}" placeholder="e.g. Lecture 3 — Relative Motion slides" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div class="field" style="margin-bottom:16px;">
+          <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">Slides Link / URL *</label>
+          <input type="text" name="url" value="${p ? escapeHtml(p.url || '') : ''}" placeholder="https://docs.google.com/presentation/d/... or a .pptx / .pdf link" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box;">
+        </div>
+        <div class="field" style="margin-bottom:16px;">
+          <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">Description / Notes <span style="font-weight:400; color:#64748B;">(optional)</span></label>
+          <textarea name="description" rows="3" placeholder="Brief summary of what these slides cover..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box; line-height:1.5;">${p ? escapeHtml(p.description || '') : ''}</textarea>
+        </div>
+      </div>
+      <div class="save-bar" style="display:flex; gap:12px;">
+        <a href="/admin/slides.php?tutorial_id=${tutorialId}" class="btn btn-outline" style="padding:10px 20px; border-radius:8px; border:1px solid #CBD5E1; text-decoration:none; color:#334155; font-weight:600;">Cancel</a>
+        <button type="submit" class="btn btn-primary" style="background:#0891B2; color:#fff; padding:10px 24px; border-radius:8px; border:none; font-weight:700; cursor:pointer;">${p ? 'Save changes' : 'Add Slides'}</button>
+      </div>
+    </form>
+  `;
+
+  res.send(renderAdminLayout(p ? 'Edit Slides' : 'New Slides', 'subjects', bodyHtml));
+});
+
+app.post('/admin/slide_form.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
+  const id = parseInt(req.query.id, 10) || 0;
+  const title = (req.body.title || '').trim();
+  const url = (req.body.url || '').trim();
+  const description = (req.body.description || '').trim();
+
+  if (!title || !url || !tutorialId) {
+    return res.redirect(`/admin/slides.php?tutorial_id=${tutorialId}`);
+  }
+
+  if (id) {
+    db.prepare('UPDATE slides SET title = ?, url = ?, description = ? WHERE id = ? AND tutorial_id = ?').run(title, url, description || null, id, tutorialId);
+  } else {
+    const maxOrderRow = db.prepare('SELECT COALESCE(MAX(sort_order), 0) as m FROM slides WHERE tutorial_id = ?').get(tutorialId);
+    const maxOrder = maxOrderRow ? maxOrderRow.m : 0;
+    db.prepare('INSERT INTO slides (tutorial_id, title, url, description, sort_order) VALUES (?, ?, ?, ?, ?)').run(tutorialId, title, url, description || null, maxOrder + 10);
+  }
+
+  res.redirect(`/admin/slides.php?tutorial_id=${tutorialId}`);
+});
+
+app.post('/admin/slide_delete.php', (req, res) => {
+  const user = getSessionUser(req);
+  if (!user || !user.is_admin) return res.redirect('/login.html');
+
+  const id = parseInt(req.body.id, 10);
+  const tutorialId = parseInt(req.body.tutorial_id, 10);
+
+  if (id) {
+    db.prepare('DELETE FROM slides WHERE id = ?').run(id);
+  }
+
+  res.redirect(`/admin/slides.php?tutorial_id=${tutorialId}`);
+});
+
 // Text Notes Management Routes
 app.get('/admin/notes.php', (req, res) => {
   const user = getSessionUser(req);
@@ -2543,6 +2731,13 @@ app.get('/api/pdfs.php', (req, res) => {
   if (!tutorialId) return res.json({ pdfs: [] });
   const rows = db.prepare('SELECT * FROM pdfs WHERE tutorial_id = ? ORDER BY sort_order ASC, id ASC').all(tutorialId);
   res.json({ pdfs: rows });
+});
+
+app.get('/api/slides.php', (req, res) => {
+  const tutorialId = parseInt(req.query.tutorial, 10) || 0;
+  if (!tutorialId) return res.json({ slides: [] });
+  const rows = db.prepare('SELECT * FROM slides WHERE tutorial_id = ? ORDER BY sort_order ASC, id ASC').all(tutorialId);
+  res.json({ slides: rows });
 });
 
 app.get('/api/notes.php', (req, res) => {

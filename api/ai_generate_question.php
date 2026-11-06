@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 
@@ -132,7 +132,7 @@ if ($provider === 'gemini') {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-    curl_setopt($ch, CURLOPT_HTTPHEADER => [
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Content-Type: application/json',
         'Authorization: Bearer ' . $apiKey
     ]);

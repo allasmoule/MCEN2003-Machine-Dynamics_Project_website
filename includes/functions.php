@@ -51,6 +51,15 @@ function require_admin(): void {
     }
 }
 
+/** Delete a tutorial and everything attached to it (SQLite has no FK cascade here). */
+function delete_tutorial_cascade(PDO $pdo, int $tutorialId): void {
+    foreach (['questions', 'videos', 'pdfs', 'slides', 'notes'] as $t) {
+        $pdo->prepare("DELETE FROM $t WHERE tutorial_id = ?")->execute([$tutorialId]);
+    }
+    $pdo->prepare('DELETE FROM content_blocks WHERE block_key = ?')->execute(['formula_sheet_t' . $tutorialId]);
+    $pdo->prepare('DELETE FROM tutorials WHERE id = ?')->execute([$tutorialId]);
+}
+
 function h(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 }

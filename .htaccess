@@ -2,7 +2,7 @@
 Options -Indexes
 
 # Block direct access to config/schema files
-<FilesMatch "^(config\.sample\.php|schema\.sql)$">
+<FilesMatch "(^(config\.sample\.php|schema\.sql)$|\.(db|sqlite|db-wal|db-shm|db-journal)$)">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>

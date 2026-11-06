@@ -1408,6 +1408,16 @@ if(pdfsToggle && pdfsPanel){
     if(open) setTimeout(()=>{ pdfsPanel.scrollIntoView({behavior:"smooth", block:"nearest"}); }, 50);
   });
 }
+const slidesPanel=document.getElementById("slidesPanel"), slidesToggle=document.getElementById("slidesToggle");
+if(slidesToggle && slidesPanel){
+  slidesToggle.addEventListener("click",()=>{
+    const open=slidesPanel.hidden;
+    slidesPanel.hidden=!open;
+    slidesToggle.setAttribute("aria-pressed",open?"true":"false");
+    slidesToggle.classList.toggle("active",open);
+    if(open) setTimeout(()=>{ slidesPanel.scrollIntoView({behavior:"smooth", block:"nearest"}); }, 50);
+  });
+}
 const notesPanel=document.getElementById("notesPanel"), notesToggle=document.getElementById("notesToggle");
 if(notesToggle && notesPanel){
   notesToggle.addEventListener("click",()=>{
@@ -2235,6 +2245,94 @@ function renderPdfs(pdfs){
   renderSidebarPdfs(list);
 }
 
+/* ---------- Slides: Google Slides / PowerPoint / PDF decks, viewed in-page ---------- */
+function slideEmbedUrl(url){
+  const u = String(url || "").trim();
+  const g = u.match(/docs\.google\.com\/presentation\/d\/([^\/?#]+)/);
+  if (g) {
+    if (/\/d\/e\//.test(u)) return u.replace(/\/pub(\?|$)/, "/embed$1");   // "Publish to web" link
+    return "https://docs.google.com/presentation/d/" + g[1] + "/embed?start=false&loop=false";
+  }
+  if (/\.(pptx?|ppsx?|potx?)(\?|#|$)/i.test(u)) {
+    const abs = new URL(u, location.href).href;
+    return "https://view.officeapps.live.com/op/embed.aspx?src=" + encodeURIComponent(abs);
+  }
+  return u;   // PDF, OneDrive/Canva embed links, etc.
+}
+
+let activeSlide = 0;
+function showSlide(list, i){
+  activeSlide = i;
+  const s = list[i];
+  const frame = document.getElementById("slideFrame");
+  if (frame && s) frame.src = slideEmbedUrl(s.url);
+  const titleEl = document.getElementById("slideTitle");
+  if (titleEl && s) titleEl.textContent = s.title;
+  const descEl = document.getElementById("slideDesc");
+  if (descEl && s) { descEl.textContent = s.description || ""; descEl.hidden = !s.description; }
+  const openEl = document.getElementById("slideOpen");
+  if (openEl && s) openEl.href = s.url;
+  document.querySelectorAll("#slidesPanel .slide-pick").forEach((b, j) => {
+    b.setAttribute("aria-pressed", j === i ? "true" : "false");
+    b.style.background = j === i ? "#0891B2" : "#fff";
+    b.style.color = j === i ? "#fff" : "#0F172A";
+  });
+}
+
+function openSlidesPanel(){
+  if (!slidesPanel) return;
+  slidesPanel.hidden = false;
+  if (slidesToggle) { slidesToggle.setAttribute("aria-pressed", "true"); slidesToggle.classList.add("active"); }
+  slidesPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function renderSlides(slides){
+  if (!slidesPanel || !slidesToggle) return;
+  const list = Array.isArray(slides) ? slides : [];
+  const acc = document.getElementById("accItemSlides");
+  if (!list.length) {
+    slidesToggle.hidden = true; slidesToggle.style.display = "none";
+    if (acc) { acc.hidden = true; acc.style.display = "none"; }
+    slidesPanel.hidden = true;
+    return;
+  }
+  slidesPanel.innerHTML =
+    '<div class="fsheet-top"><span class="label">Lecture Slides</span></div>' +
+    '<div style="padding:16px; display:flex; flex-direction:column; gap:12px;">' +
+      (list.length > 1 ?
+        '<div style="display:flex; flex-wrap:wrap; gap:8px;">' +
+        list.map((s, i) => '<button type="button" class="slide-pick" data-sindex="' + i + '" style="border:1px solid #CBD5E1; border-radius:6px; padding:6px 12px; font-size:12.5px; font-weight:600; cursor:pointer;">' + esc(s.title) + '</button>').join("") +
+        '</div>' : '') +
+      '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">' +
+        '<h4 id="slideTitle" style="margin:0; font-size:15px; color:#0F172A; font-weight:700;"></h4>' +
+        '<a id="slideOpen" href="#" target="_blank" rel="noopener" style="background:#0891B2; color:#fff; padding:7px 14px; border-radius:6px; font-weight:700; font-size:12.5px; text-decoration:none;">Open full screen &rarr;</a>' +
+      '</div>' +
+      '<p id="slideDesc" style="margin:0; font-size:13px; color:#64748B;" hidden></p>' +
+      '<div style="position:relative; width:100%; padding-top:59.3%; background:#0F172A; border-radius:10px; overflow:hidden; border:1px solid #E2E8F0;">' +
+        '<iframe id="slideFrame" title="Lecture slides" style="position:absolute; inset:0; width:100%; height:100%; border:0;" allowfullscreen loading="lazy"></iframe>' +
+      '</div>' +
+    '</div>';
+  slidesPanel.querySelectorAll(".slide-pick").forEach((b, i) => b.addEventListener("click", () => showSlide(list, i)));
+  showSlide(list, 0);
+  slidesToggle.hidden = false; slidesToggle.style.display = "";
+  if (acc) { acc.hidden = false; acc.style.display = ""; }
+
+  const countEl = document.getElementById("slideCount");
+  if (countEl) countEl.textContent = list.length;
+  const listEl = document.getElementById("railSlideList");
+  if (listEl) {
+    listEl.innerHTML = list.map((s, i) =>
+      '<li><button class="rail-sub-item" data-sindex="' + i + '" title="' + esc(s.title) + '">' +
+      '<svg class="rail-sub-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="13" rx="1.5"/><path d="M12 16v4M8 20h8"/></svg>' +
+      '<span class="rail-sub-text">' + esc(s.title) + '</span>' +
+      '</button></li>'
+    ).join("");
+    listEl.querySelectorAll("button.rail-sub-item").forEach((b, i) => {
+      b.addEventListener("click", () => { showSlide(list, i); openSlidesPanel(); });
+    });
+  }
+}
+
 function renderNotes(notes){
   if(!notesPanel || !notesToggle) return;
   const list = (Array.isArray(notes) && notes.length > 0) ? notes : DEFAULT_NOTES;
@@ -2316,6 +2414,13 @@ function renderNotes(notes){
     }
   }catch(e){
     renderPdfs(null);
+  }
+  try{
+    const sUrl = "api/slides.php" + (resolvedTutorialId ? "?tutorial="+encodeURIComponent(resolvedTutorialId) : "");
+    const sRes = await fetch(sUrl);
+    renderSlides(sRes.ok ? (await sRes.json()).slides : null);
+  }catch(e){
+    renderSlides(null);
   }
   try{
     const nUrl = "api/notes.php" + (resolvedTutorialId ? "?tutorial="+encodeURIComponent(resolvedTutorialId) : "");

@@ -1,6 +1,6 @@
 ---
 name: add-tutorial
-description: Add a new tutorial (Tutorial 2, 3, …) or add questions / videos / PDFs / notes to an existing tutorial on the MCEN2003 Machine Dynamics website, in the same format as Tutorial 1, test it locally, then commit and push to GitHub main automatically. Use when the user says things like "Tutorial 2 banaw", "Tutorial 1 e aro question add koro", "add questions on projectile motion", or invokes /add-tutorial.
+description: Add a new tutorial (Tutorial 2, 3, …) or add questions / videos / PDFs / slides / notes to an existing tutorial on the MCEN2003 Machine Dynamics website, in the same format as Tutorial 1, test it locally, then commit and push to GitHub main automatically. Use when the user says things like "Tutorial 2 banaw", "Tutorial 1 e aro question add koro", "add questions on projectile motion", or invokes /add-tutorial.
 argument-hint: "<Tutorial N> <topic> [number of questions] — e.g. \"Tutorial 2: Relative motion, 6 questions\" or \"Tutorial 1: add 3 more on projectile motion\""
 ---
 
@@ -16,22 +16,28 @@ Work out from the request:
 - **Which tutorial** — a new one (`Tutorial N` that does not exist yet) or an existing one.
 - **Topic** — what the questions are about.
 - **How many questions** — default 5 for a new tutorial, 3 when adding to an existing one.
-- Any **videos / PDFs / notes** the user gave (URLs, titles).
+- Any **videos / PDFs / slides / notes** the user gave (URLs, titles). Slides = Google Slides,
+  PowerPoint (.pptx) or PDF deck links shown in the tutorial's built-in slide viewer.
 
 ## How the site stores content (read this first)
 
-- The live site (Vercel) uses a throwaway SQLite DB that is rebuilt from files in git on
-  every cold start. **Anything added only through the admin panel disappears.** All content
-  must live in files in the repo.
+- Database: **SQLite, one file: `database/app.db`**, shared by both backends — the PHP
+  version (`admin/`, `api/`, `includes/db.php`, for cPanel) and the Node version (`server.js`).
+  A clean copy is committed to git; rebuild it with `npm run db:build` (no users/sessions in it).
+- On cPanel the file lives on the server's disk, so admin-panel edits persist there. On Vercel
+  the DB is throwaway. Either way, **content added by this skill must go in seed files in git**,
+  and both backends load them on start (`seedTutorialFiles()` in server.js,
+  `seed_tutorial_files()` in includes/db.php).
 - Tutorial 1's original 5 questions: `seed/questions_seed.json` (legacy — do not edit).
 - Everything else: **one JSON file per tutorial in `seed/tutorials/`**, loaded by
   `seedTutorialFiles()` in `server.js`:
   - `seed/tutorials/tutorial-2.json` → creates/updates Tutorial 2.
   - `seed/tutorials/tutorial-1.json` with `"slug": "tutorial-1"` and no title → adds extra
     questions to Tutorial 1 (append to its `questions` array if the file already exists).
-  - Questions are upserted by `id`; videos/PDFs/notes are added when their `title` is new.
+  - Questions are upserted by `id`; videos/PDFs/slides/notes are added when their `title` is new.
 - The tutorial page is always `tutorial1.html?tutorial=<db id>`. The subject page lists
   tutorials from the API, so a new tutorial appears there automatically. No new HTML page.
+- Slides admin: `admin/slides.php` (PHP) and `/admin/slides.php` (Node); API `api/slides.php`.
 - Per-question teaching extras live in `workbook.js`, in objects keyed by question id:
   `TRAPS`, `CONCEPT`, `WHY`, `GRAPHS` (search for `const TRAPS = {` etc.).
 
@@ -68,6 +74,7 @@ Create or extend `seed/tutorials/tutorial-<N>.json`:
   "questions": [ { ...question... } ],
   "videos": [ { "title": "...", "url": "https://www.youtube.com/watch?v=...", "description": "..." } ],
   "pdfs":   [ { "title": "...", "url": "https://...", "description": "..." } ],
+  "slides": [ { "title": "Lecture 2 — Relative motion", "url": "https://docs.google.com/presentation/d/<ID>/edit", "description": "..." } ],
   "notes":  [ { "title": "...", "description": "short tag", "content": "plain text, \n for new lines" } ],
   "formula_sheet": { "heading": "...", "subheading": "...", "boxes": [ { "title": "...", "items": ["HTML string", "..."] } ] }
 }
@@ -77,9 +84,11 @@ Create or extend `seed/tutorials/tutorial-<N>.json`:
 `formula_sheet` is optional; without it the global sheet (`seed/formula_sheet_seed.json`) shows.
 Same shape as that file.
 
-**Always give a new tutorial at least one note, and add videos/PDFs only if the user supplied
-real URLs.** If a tutorial has no videos/PDFs, the page falls back to Tutorial 1's defaults.
-Never invent YouTube or PDF links. If none were given, tell the user so in the report.
+**Always give a new tutorial at least one note, and add videos/PDFs/slides only if the user
+supplied real URLs.** If a tutorial has no videos/PDFs, the page falls back to Tutorial 1's
+defaults; with no slides the Slides button is simply hidden. Never invent YouTube, PDF or
+slide links. If none were given, tell the user so in the report. Google Slides links must be
+shared as "Anyone with the link"; .pptx links must be publicly reachable (Office viewer).
 
 Each question, matching Tutorial 1 exactly:
 
@@ -140,10 +149,17 @@ restart it if running so the seeder runs. Check the server log for the
 
 ### 6. Commit and push to main (automatic — the user asked for this)
 
-Stage only the files you changed (never `app.db`, `node_modules`, `.claude/launch.json`):
+Stop the local servers first (the preview server holds `database/app.db` open), then rebuild
+the clean database so it includes the new content and none of your test logins:
 
 ```bash
-git add seed/tutorials/tutorial-<N>.json workbook.js
+npm run db:build
+```
+
+Stage only the files you changed (never `node_modules`, `uploads/`, `.claude/launch.json`):
+
+```bash
+git add seed/tutorials/tutorial-<N>.json workbook.js database/app.db
 git commit -m "Add Tutorial <N>: <topic> (<k> questions)"      # or "Tutorial <N>: add <k> questions on <topic>"
 git pull --rebase origin main
 git push origin main
