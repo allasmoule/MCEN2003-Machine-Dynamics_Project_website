@@ -2527,7 +2527,50 @@ app.get('/admin/slide_form.php', (req, res) => {
     p = db.prepare('SELECT * FROM slides WHERE id = ? AND tutorial_id = ?').get(id, tutorialId);
   }
 
-  const bodyHtml = `
+  const newHtml = `
+    <div style="margin-bottom:12px;"><a href="/admin/slides.php?tutorial_id=${tutorialId}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to slides</a></div>
+    <form method="post" action="/admin/slide_form.php?tutorial_id=${tutorialId}" style="max-width:680px;">
+      <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:12px; padding:24px; margin-bottom:20px;">
+        ${req.query.err ? '<div style="background:#FEF2F2; color:#DC2626; border:1px solid #FCA5A5; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-weight:600;">Each slide needs both a title and a link.</div>' : ''}
+        <p style="margin:0 0 14px; font-size:13px; color:#64748B;">Add one or more slide decks: Google Slides, PowerPoint (.pptx) or PDF links. (Google Slides: Share &rarr; "Anyone with the link".)</p>
+        <div id="slideRows"><div class="slide-row" style="border:1px solid #E2E8F0; border-radius:10px; padding:16px; margin-bottom:14px; background:#F8FAFC;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><strong class="slide-row-n" style="font-size:13px; color:#0891B2;">Slide 1</strong><button type="button" class="slide-row-del" style="background:none; border:none; color:#DC2626; font-weight:600; cursor:pointer; font-size:12.5px;">Remove</button></div><div class="field" style="margin-bottom:12px;"><label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">Title *</label><input type="text" name="title[0]" placeholder="e.g. Lecture 3 — Relative Motion slides" style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box;"></div><div class="field" style="margin-bottom:12px;"><label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">Slides Link / URL</label><input type="text" name="url[0]" placeholder="https://docs.google.com/presentation/d/... or a .pptx / .pdf link" style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box;"></div><div class="field"><label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:6px;">Description <span style="font-weight:400; color:#64748B;">(optional)</span></label><input type="text" name="description[0]" placeholder="What these slides cover" style="width:100%; padding:10px; border-radius:8px; border:1px solid #CBD5E1; font-size:14px; box-sizing:border-box;"></div></div></div>
+        <button type="button" id="addSlideRow" style="background:#ECFEFF; color:#0891B2; border:1px dashed #0891B2; padding:10px 16px; border-radius:8px; font-weight:700; cursor:pointer; width:100%; font-size:13.5px;">+ Add another slide</button>
+      </div>
+      <div class="save-bar" style="display:flex; gap:12px;">
+        <a href="/admin/slides.php?tutorial_id=${tutorialId}" class="btn btn-outline" style="padding:10px 20px; border-radius:8px; border:1px solid #CBD5E1; text-decoration:none; color:#334155; font-weight:600;">Cancel</a>
+        <button type="submit" class="btn btn-primary" style="background:#0891B2; color:#fff; padding:10px 24px; border-radius:8px; border:none; font-weight:700; cursor:pointer;">Save slides</button>
+      </div>
+    </form>
+<script>
+(function(){
+  var box = document.getElementById('slideRows'), add = document.getElementById('addSlideRow');
+  if (!box || !add) return;
+  var tpl = box.querySelector('.slide-row').cloneNode(true);
+  function renumber(){
+    var rows = box.querySelectorAll('.slide-row');
+    rows.forEach(function(r, i){
+      r.querySelector('.slide-row-n').textContent = 'Slide ' + (i + 1);
+      r.querySelectorAll('[name]').forEach(function(el){ el.name = el.name.replace(/\\[\\d*\\]$/, '[' + i + ']'); });
+      r.querySelector('.slide-row-del').style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+    });
+  }
+  box.addEventListener('click', function(e){
+    if (!e.target.classList.contains('slide-row-del')) return;
+    if (box.querySelectorAll('.slide-row').length > 1) e.target.closest('.slide-row').remove();
+    renumber();
+  });
+  add.addEventListener('click', function(){
+    var r = tpl.cloneNode(true);
+    r.querySelectorAll('input').forEach(function(i){ i.value = ''; });
+    box.appendChild(r); renumber();
+    r.querySelector('input[type=text]').focus();
+  });
+  renumber();
+})();
+</script>
+  `;
+
+  const bodyHtml = p ? `
     <div style="margin-bottom:12px;"><a href="/admin/slides.php?tutorial_id=${tutorialId}" style="color:#102A56; text-decoration:none; font-size:13px;">&larr; Back to slides</a></div>
     <form method="post" action="/admin/slide_form.php?tutorial_id=${tutorialId}${id ? '&id=' + id : ''}" style="max-width:640px;">
       <div class="card" style="background:#fff; border:1px solid #E2E8F0; border-radius:12px; padding:24px; margin-bottom:20px;">
@@ -2549,7 +2592,7 @@ app.get('/admin/slide_form.php', (req, res) => {
         <button type="submit" class="btn btn-primary" style="background:#0891B2; color:#fff; padding:10px 24px; border-radius:8px; border:none; font-weight:700; cursor:pointer;">${p ? 'Save changes' : 'Add Slides'}</button>
       </div>
     </form>
-  `;
+  ` : newHtml;
 
   res.send(renderAdminLayout(p ? 'Edit Slides' : 'New Slides', 'subjects', bodyHtml));
 });
@@ -2560,20 +2603,29 @@ app.post('/admin/slide_form.php', (req, res) => {
 
   const tutorialId = parseInt(req.query.tutorial_id, 10) || 0;
   const id = parseInt(req.query.id, 10) || 0;
-  const title = (req.body.title || '').trim();
-  const url = (req.body.url || '').trim();
-  const description = (req.body.description || '').trim();
-
-  if (!title || !url || !tutorialId) {
-    return res.redirect(`/admin/slides.php?tutorial_id=${tutorialId}`);
-  }
+  if (!tutorialId) return res.redirect('/admin/subjects.php');
+  const list = v => (Array.isArray(v) ? v : (v == null ? [] : [v])).map(x => String(x || '').trim());
 
   if (id) {
+    const title = list(req.body.title)[0] || '';
+    const url = list(req.body.url)[0] || '';
+    const description = list(req.body.description)[0] || '';
+    if (!title || !url) return res.redirect(`/admin/slides.php?tutorial_id=${tutorialId}`);
     db.prepare('UPDATE slides SET title = ?, url = ?, description = ? WHERE id = ? AND tutorial_id = ?').run(title, url, description || null, id, tutorialId);
   } else {
-    const maxOrderRow = db.prepare('SELECT COALESCE(MAX(sort_order), 0) as m FROM slides WHERE tutorial_id = ?').get(tutorialId);
-    const maxOrder = maxOrderRow ? maxOrderRow.m : 0;
-    db.prepare('INSERT INTO slides (tutorial_id, title, url, description, sort_order) VALUES (?, ?, ?, ?, ?)').run(tutorialId, title, url, description || null, maxOrder + 10);
+    // One or more decks at once (title[] / url[] / description[])
+    const titles = list(req.body.title), urls = list(req.body.url), descs = list(req.body.description);
+    const rows = [];
+    for (let i = 0; i < Math.max(titles.length, urls.length); i++) {
+      const t = titles[i] || '', u = urls[i] || '';
+      if (!t && !u) continue;
+      if (!t || !u) return res.redirect(`/admin/slide_form.php?tutorial_id=${tutorialId}&err=1`);
+      rows.push([t, u, descs[i] || null]);
+    }
+    if (!rows.length) return res.redirect(`/admin/slide_form.php?tutorial_id=${tutorialId}&err=1`);
+    let order = db.prepare('SELECT COALESCE(MAX(sort_order), 0) as m FROM slides WHERE tutorial_id = ?').get(tutorialId).m;
+    const ins = db.prepare('INSERT INTO slides (tutorial_id, title, url, description, sort_order) VALUES (?, ?, ?, ?, ?)');
+    for (const [t, u, d] of rows) { order += 10; ins.run(tutorialId, t, u, d, order); }
   }
 
   res.redirect(`/admin/slides.php?tutorial_id=${tutorialId}`);

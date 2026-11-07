@@ -2290,10 +2290,20 @@ function renderSlides(slides){
   if (!slidesPanel || !slidesToggle) return;
   const list = Array.isArray(slides) ? slides : [];
   const acc = document.getElementById("accItemSlides");
+  slidesToggle.hidden = false; slidesToggle.style.display = "";
+  if (acc) { acc.hidden = false; acc.style.display = ""; }
+  const countEl0 = document.getElementById("slideCount");
+  if (countEl0) countEl0.textContent = list.length;
   if (!list.length) {
-    slidesToggle.hidden = true; slidesToggle.style.display = "none";
-    if (acc) { acc.hidden = true; acc.style.display = "none"; }
-    slidesPanel.hidden = true;
+    const msg = "No slides for this tutorial yet. Your lecturer can add them from the admin panel (Tutorials \u2192 Slides \u2192 + Add Slides).";
+    slidesPanel.innerHTML =
+      '<div class="fsheet-top"><span class="label">Lecture Slides</span></div>' +
+      '<div style="padding:24px 16px; text-align:center; color:#64748B; font-size:13.5px;">' + esc(msg) + '</div>';
+    const listEl0 = document.getElementById("railSlideList");
+    if (listEl0) {
+      listEl0.innerHTML = '<li><button class="rail-sub-item" type="button"><span class="rail-sub-text" style="color:#94A3B8;">No slides yet</span></button></li>';
+      listEl0.querySelector("button").addEventListener("click", openSlidesPanel);
+    }
     return;
   }
   slidesPanel.innerHTML =
