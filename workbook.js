@@ -970,12 +970,24 @@ function curPage(){
 }
 function triedCount(q,st){ return (q.parts || []).filter((p,i)=>st.tried[i]).length; }
 function isUnlocked(q,st){ return (q.parts || []).length > 0 && triedCount(q,st)===(q.parts || []).length; }
-function save(){ 
-  try{ 
-    localStorage.setItem(KEY, JSON.stringify(store)); 
+let saveWarned=false;
+function save(){
+  try{
+    localStorage.setItem(KEY, JSON.stringify(store));
     const tutId = new URLSearchParams(location.search).get("tutorial") || "1";
-    localStorage.setItem("mcen-active-" + tutId, String(active)); 
-  }catch(e){} 
+    localStorage.setItem("mcen-active-" + tutId, String(active));
+    if(saveWarned){
+      saveWarned=false;
+      const n=document.getElementById("padNote");
+      if(n){ n.style.color=""; n.textContent = document.getElementById("padType").hidden ? "stylus, finger or mouse" : "lines auto-calculate →"; }
+    }
+  }catch(e){
+    if(!saveWarned){
+      saveWarned=true;
+      const n=document.getElementById("padNote");
+      if(n){ n.textContent="⚠ This browser's storage is full — your newest work isn't saved. Export it, then use “Erase all ink” on old pages."; n.style.color="var(--bad)"; }
+    }
+  }
 }
 function esc(s){return String(s || '').replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
@@ -1392,10 +1404,16 @@ let penColor="ink", penWidth=2.6, erasing=false, drawing=false, current=null, ac
 function inkColor(){ return getComputedStyle(document.documentElement).getPropertyValue("--ink").trim()||"#161B21"; }
 
 function sizeBoard(){
-  const r=board.getBoundingClientRect(); if(!r.width) return;
+  const r=board.getBoundingClientRect(); if(!r.width||!r.height) return;
   const dpr=Math.min(window.devicePixelRatio||1, 2.5);
-  board.width=Math.round(r.width*dpr); board.height=Math.round(r.height*dpr);
+  const w=Math.round(r.width*dpr), h=Math.round(r.height*dpr);
+  if(board.width!==w||board.height!==h){ board.width=w; board.height=h; }
   ctx.setTransform(dpr,0,0,dpr,0,0); redraw();
+}
+// The canvas must always match its on-screen size, or strokes land in the wrong place
+// (or off the canvas). Re-size on any box change, not only on window resize.
+if(window.ResizeObserver){
+  new ResizeObserver(()=>{ if(!drawing) sizeBoard(); }).observe(board);
 }
 function strokeColor(st){ return st.c==="ink" ? inkColor() : st.c; }
 function widthAt(st,pr){ return st.w*(0.45+1.1*(pr==null?0.5:pr)); }
@@ -1420,12 +1438,18 @@ function loadBoard(){ if(!document.getElementById("padDraw").hidden) sizeBoard()
 function pos(e){
   const r=board.getBoundingClientRect();
   const pr = (e.pressure!=null && e.pressure>0) ? e.pressure : 0.5;
-  return [e.clientX-r.left, e.clientY-r.top, pr];
+  return [Math.round((e.clientX-r.left)*10)/10, Math.round((e.clientY-r.top)*10)/10, Math.round(pr*100)/100];
 }
 
 board.addEventListener("pointerdown",e=>{
-  if(penOnly && e.pointerType!=="pen") return;      // palm rejection, only when the teacher-facing toggle is on
-  if(drawing) return;                                // ignore a second finger mid-stroke
+  if(e.pointerType==="mouse" && e.button!==0) return; // right / middle click never draws
+  if(penOnly && e.pointerType==="touch"){ penOnlyHint(); return; } // palm rejection: only fingers are ignored
+  if(drawing){
+    if(e.pointerType==="touch" && e.pointerId!==activeId) return;   // a second finger mid-stroke
+    endStroke();                                       // a stale stroke (lost pointerup) must not lock the board
+  }
+  if(!QUESTIONS || !QUESTIONS.length) return;        // nothing loaded yet: nowhere to keep the ink
+  if(board.width<10 || Math.abs(board.getBoundingClientRect().width*Math.min(window.devicePixelRatio||1,2.5)-board.width)>2) sizeBoard();
   e.preventDefault();
   activeId=e.pointerId;
   try{ board.setPointerCapture(e.pointerId); }catch(err){}
@@ -1453,12 +1477,16 @@ board.addEventListener("pointermove",e=>{
 
 function endStroke(e){
   if(!drawing) return;
-  if(e && e.pointerId!==activeId) return;
+  if(e && e.pointerId!==undefined && e.pointerId!==activeId) return;
   drawing=false; current=null; activeId=null;
   save();
 }
 board.addEventListener("pointerup",endStroke);
 board.addEventListener("pointercancel",endStroke);
+board.addEventListener("lostpointercapture",endStroke);
+window.addEventListener("pointerup",e=>{ if(drawing && e.pointerId===activeId) endStroke(e); });
+window.addEventListener("blur",()=>{ if(drawing) endStroke(); });
+board.addEventListener("contextmenu",e=>e.preventDefault());
 // NB: no pointerleave handler — on iPadOS it can fire straight after pointerdown and kill the stroke
 
 function eraseAt(pt){
@@ -1471,12 +1499,20 @@ function eraseAt(pt){
    Turning it on also lets a finger scroll the page instead of drawing. */
 let penOnly=false;
 try{ penOnly = localStorage.getItem("mcen-penonly-v2")==="1"; }catch(e){}
+let penHintT=0;
+function penOnlyHint(){
+  const b=document.getElementById("stylusOnly");
+  b.classList.add("nudge");
+  b.innerHTML="✎ Pen only is ON — tap to turn off";
+  clearTimeout(penHintT);
+  penHintT=setTimeout(()=>{ b.classList.remove("nudge"); setPenOnly(penOnly); },3000);
+}
 function setPenOnly(on){
   penOnly=on;
   const b=document.getElementById("stylusOnly");
   b.setAttribute("aria-pressed",on?"true":"false");
   b.innerHTML = on ? "✎ Pen only ✓" : "✎ Pen only";
-  b.title = on ? "Only a stylus draws — rest your hand on the screen, and a finger scrolls the page"
+  b.title = on ? "Only a stylus or mouse draws — rest your hand on the screen, and a finger scrolls the page"
                : "Anything draws: finger, stylus or mouse";
   board.style.touchAction = on ? "pan-y" : "none";
   try{ localStorage.setItem("mcen-penonly-v2", on?"1":"0"); }catch(e){}
@@ -1507,6 +1543,7 @@ document.getElementById("eraser").addEventListener("click",e=>{
 document.getElementById("undoStroke").addEventListener("click",()=>{ curPage().s.pop(); save(); redraw(); });
 document.getElementById("clearBoard").addEventListener("click",()=>{ curPage().s=[]; save(); redraw(); });
 window.addEventListener("resize",()=>{ if(!document.getElementById("padDraw").hidden) sizeBoard(); });
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden && !document.getElementById("padDraw").hidden && !drawing) sizeBoard(); });
 window.addEventListener("orientationchange",()=>{ setTimeout(()=>{ if(!document.getElementById("padDraw").hidden) sizeBoard(); },250); });
 
 /* ============================================================
