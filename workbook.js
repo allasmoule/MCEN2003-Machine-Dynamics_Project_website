@@ -628,15 +628,45 @@ const TOL = 0.015;
 /* ============================================================
    EXPRESSION ENGINE
    ============================================================ */
-const CONSTANTS = {pi:Math.PI, e:Math.E, g:9.81};
+/* Physics constants. Names are chosen so they don't clash with the letters
+   students use for their own variables (c = damping, h = height, R = radius). */
+const CONSTANTS = {
+  pi:Math.PI, e:Math.E, g:9.81,
+  G:6.674e-11, c0:299792458, hP:6.62607015e-34, kB:1.380649e-23, NA:6.02214076e23,
+  Rgas:8.314462618, qe:1.602176634e-19, me:9.1093837015e-31, mp:1.67262192e-27,
+  eps0:8.8541878128e-12, mu0:1.25663706212e-6, sigmaSB:5.670374419e-8, atm:101325
+};
+const CONST_INFO = [
+  ["g","g","9.81 m/s²","gravity"],
+  ["G","G","6.674×10⁻¹¹ N·m²/kg²","gravitational constant"],
+  ["c0","c₀","2.998×10⁸ m/s","speed of light"],
+  ["hP","h","6.626×10⁻³⁴ J·s","Planck constant"],
+  ["kB","k_B","1.381×10⁻²³ J/K","Boltzmann constant"],
+  ["NA","N_A","6.022×10²³ /mol","Avogadro number"],
+  ["Rgas","R","8.314 J/(mol·K)","gas constant"],
+  ["qe","e","1.602×10⁻¹⁹ C","elementary charge"],
+  ["me","mₑ","9.109×10⁻³¹ kg","electron mass"],
+  ["mp","mₚ","1.673×10⁻²⁷ kg","proton mass"],
+  ["eps0","ε₀","8.854×10⁻¹² F/m","permittivity of free space"],
+  ["mu0","μ₀","1.257×10⁻⁶ H/m","permeability of free space"],
+  ["sigmaSB","σ","5.670×10⁻⁸ W/(m²·K⁴)","Stefan–Boltzmann"],
+  ["atm","atm","101325 Pa","standard atmosphere"]
+];
 const scope = Object.create(null);
 let angleDeg = true;
+try{ if(localStorage.getItem("mcen-angle")==="rad") angleDeg=false; }catch(e){}
+let siUnits = true;
+try{ if(localStorage.getItem("mcen-si")==="0") siUnits=false; }catch(e){}
+
+function calcErr(msg){ const e=new Error(msg); e.calc=true; return e; }
+const ID_START=/[A-Za-z_Ͱ-Ͽ]/, ID_PART=/[A-Za-z_0-9Ͱ-Ͽ]/;
 
 function tokenize(src){
-  const out=[]; let i=0;
+  const out=[]; let i=0, ws=false;
+  const push=t=>{ t.ws=ws; ws=false; out.push(t); };
   while(i<src.length){
     const c=src[i];
-    if(/\s/.test(c)){i++;continue;}
+    if(/\s/.test(c)){ ws=true; i++; continue; }
     if(/[0-9.]/.test(c)){
       let j=i;
       while(j<src.length && /[0-9.]/.test(src[j])) j++;
@@ -646,71 +676,226 @@ function tokenize(src){
         if(/[0-9]/.test(src[k]||'')){ k++; while(k<src.length&&/[0-9]/.test(src[k]))k++; j=k; }
       }
       const t=src.slice(i,j);
-      if(!/^\d*\.?\d*(?:[eE][+-]?\d+)?$/.test(t)||isNaN(parseFloat(t))) throw 0;
-      out.push({k:'n',v:parseFloat(t)}); i=j; continue;
+      if(!/^\d*\.?\d*(?:[eE][+-]?\d+)?$/.test(t)||isNaN(parseFloat(t))) throw calcErr("bad number “"+t+"”");
+      push({k:'n',v:parseFloat(t)}); i=j; continue;
     }
-    if(/[A-Za-z_]/.test(c)){
-      let j=i; while(j<src.length&&/[A-Za-z_0-9]/.test(src[j])) j++;
-      out.push({k:'id',v:src.slice(i,j)}); i=j; continue;
+    if(c==='π'){ push({k:'id',v:'pi'}); i++; continue; }
+    if(c==='√'||c==='∛'){ push({k:c}); i++; continue; }
+    if(c==='²'||c==='³'){ push({k:'^'}); out.push({k:'n',v:c==='²'?2:3}); i++; continue; }
+    if(ID_START.test(c)){
+      let j=i; while(j<src.length&&ID_PART.test(src[j])&&src[j]!=='π') j++;
+      push({k:'id',v:src.slice(i,j)}); i=j; continue;
     }
-    if('+-*/^%(),'.indexOf(c)>-1){ out.push({k:c}); i++; continue; }
-    throw 0;
+    if(c==='*'&&src[i+1]==='*'){ push({k:'^'}); i+=2; continue; }
+    const map={'×':'*','·':'*','⋅':'*','÷':'/','−':'-','–':'-','[':'(',']':')','{':'(','}':')'};
+    const k=map[c]||c;
+    if('+-*/^%(),!°'.indexOf(k)>-1){ push({k:k}); i++; continue; }
+    throw calcErr("can't use “"+c+"”");
   }
   return out;
 }
 function ang(x){return angleDeg ? x*Math.PI/180 : x;}
 function unang(x){return angleDeg ? x*180/Math.PI : x;}
+function factorial(n){
+  if(n<0||Math.abs(n-Math.round(n))>1e-9) throw calcErr("n! needs a whole number ≥ 0");
+  n=Math.round(n); if(n>170) return Infinity;
+  let r=1; for(let i=2;i<=n;i++) r*=i; return r;
+}
+function nCr(n,r){ if(r<0||r>n) return 0; return Math.round(factorial(n)/(factorial(r)*factorial(n-r))); }
+function nPr(n,r){ if(r<0||r>n) return 0; return Math.round(factorial(n)/factorial(n-r)); }
 const FN = {
   sin:x=>Math.sin(ang(x)), cos:x=>Math.cos(ang(x)), tan:x=>Math.tan(ang(x)),
+  sec:x=>1/Math.cos(ang(x)), csc:x=>1/Math.sin(ang(x)), cot:x=>1/Math.tan(ang(x)),
   asin:x=>unang(Math.asin(x)), acos:x=>unang(Math.acos(x)), atan:x=>unang(Math.atan(x)),
   atan2:(y,x)=>unang(Math.atan2(y,x)),
-  sqrt:Math.sqrt, abs:Math.abs, ln:Math.log, log:Math.log10, exp:Math.exp,
-  round:x=>Math.round(x), floor:Math.floor, ceil:Math.ceil, min:Math.min, max:Math.max
+  sinh:Math.sinh, cosh:Math.cosh, tanh:Math.tanh, asinh:Math.asinh, acosh:Math.acosh, atanh:Math.atanh,
+  sqrt:Math.sqrt, cbrt:Math.cbrt,
+  root:(x,n)=> (n%2===1&&x<0) ? -Math.pow(-x,1/n) : Math.pow(x,1/n),
+  abs:Math.abs, sign:Math.sign,
+  ln:Math.log, log:(x,b)=> b===undefined ? Math.log10(x) : Math.log(x)/Math.log(b),
+  log10:Math.log10, log2:Math.log2, exp:Math.exp, pow:Math.pow, hypot:Math.hypot,
+  mod:(a,b)=>((a%b)+b)%b,
+  round:(x,n)=>{ const f=Math.pow(10,n||0); return Math.round(x*f)/f; },
+  floor:Math.floor, ceil:Math.ceil, min:Math.min, max:Math.max,
+  fact:factorial, nCr:nCr, ncr:nCr, nPr:nPr, npr:nPr,
+  deg:x=>x*180/Math.PI, rad:x=>x*Math.PI/180
 };
 function evaluate(src, vars){
   const t=tokenize(src);
-  if(!t.length) throw 0;
+  if(!t.length) throw calcErr("empty");
+  // forgive missing closing brackets: "2*cos(45" -> "2*cos(45)"
+  let depth=0;
+  for(const k of t){ if(k.k==='(') depth++; else if(k.k===')'){ depth--; if(depth<0) throw calcErr("too many “)”"); } }
+  for(; depth>0; depth--) t.push({k:')'});
   let p=0;
   const peek=()=>t[p], eat=k=>{ if(t[p]&&t[p].k===k){p++;return true;} return false; };
+  const startsAtom=tk=>tk&&(tk.k==='n'||tk.k==='id'||tk.k==='('||tk.k==='√'||tk.k==='∛');
+  // implicit multiplication: 2pi, 3x, 2(a+b), (a)(b), 4 sin(30). Not across a space
+  // before a plain name, so "10 m/s" is still read as a value with a unit.
+  function implicitNext(){
+    const tk=peek(); if(!startsAtom(tk)) return false;
+    if(!tk.ws) return true;
+    if(tk.k==='('||tk.k==='√'||tk.k==='∛') return true;
+    return tk.k==='id' && FN[tk.v] && t[p+1] && t[p+1].k==='(';
+  }
   function expr(){ let v=term(); for(;;){ if(eat('+')) v+=term(); else if(eat('-')) v-=term(); else return v; } }
-  function term(){ let v=unary(); for(;;){ if(eat('*')) v*=unary(); else if(eat('/')) v/=unary(); else if(eat('%')) v%=unary(); else return v; } }
-  function unary(){ if(eat('-')) return -unary(); if(eat('+')) return unary(); return power(); }
-  function power(){ const b=atom(); if(eat('^')) return Math.pow(b, unary()); return b; }
+  function term(){
+    let v=unary();
+    for(;;){
+      if(eat('*')) v*=unary();
+      else if(eat('/')) v/=unary();
+      else if(eat('%')) v%=unary();
+      else if(implicitNext()) v*=unary();
+      else return v;
+    }
+  }
+  function unary(){
+    if(eat('-')) return -unary();
+    if(eat('+')) return unary();
+    if(eat('√')) return Math.sqrt(unary());
+    if(eat('∛')) return Math.cbrt(unary());
+    return power();
+  }
+  function power(){ const b=postfix(); if(eat('^')) return Math.pow(b, unary()); return b; }
+  function postfix(){
+    let v=atom();
+    for(;;){
+      if(eat('!')) v=factorial(v);
+      else if(eat('°')) v=angleDeg ? v : v*Math.PI/180;
+      else return v;
+    }
+  }
   function atom(){
-    const tk=peek(); if(!tk) throw 0;
+    const tk=peek(); if(!tk) throw calcErr("unfinished — add a number");
     if(tk.k==='n'){p++; return tk.v;}
-    if(tk.k==='('){p++; const v=expr(); if(!eat(')')) throw 0; return v;}
+    if(tk.k==='('){p++; const v=expr(); if(!eat(')')) throw calcErr("missing “)”"); return v;}
     if(tk.k==='id'){
-      p++; const name=tk.v;
-      if(peek()&&peek().k==='('){
+      p++; const name=tk.v, f=FN[name];
+      if(peek()&&peek().k==='('&&(f||!(vars&&name in vars))){
+        if(!f) throw calcErr("unknown function “"+name+"”");
         p++; const args=[];
-        if(!eat(')')){ args.push(expr()); while(eat(',')) args.push(expr()); if(!eat(')')) throw 0; }
-        const f=FN[name]; if(!f) throw 0;
+        if(!eat(')')){ args.push(expr()); while(eat(',')) args.push(expr()); if(!eat(')')) throw calcErr("missing “)”"); }
         return f.apply(null,args);
       }
       if(vars && name in vars) return vars[name];
       if(name in CONSTANTS) return CONSTANTS[name];
-      throw 0;
+      if(f && startsAtom(peek())) return f(power());   // "sin 30"
+      throw calcErr("“"+name+"” is not defined");
     }
-    throw 0;
+    throw calcErr("unexpected “"+tk.k+"”");
   }
   const val=expr();
-  if(p!==t.length) throw 0;
-  if(typeof val!=='number'||!isFinite(val)) throw 0;
+  if(p!==t.length) throw calcErr("unexpected “"+(t[p].k==='n'?t[p].v:t[p].k==='id'?t[p].v:t[p].k)+"”");
+  if(typeof val!=='number'||isNaN(val)) throw calcErr("not a real number");
+  if(!isFinite(val)) throw calcErr("infinite — divide by zero?");
   return val;
 }
-function evalLoose(src, vars){
+
+/* ---------- units: convert to SI (pad + calculator only, never answer boxes) ---------- */
+const TAU=2*Math.PI;
+const UNITS={
+  m:[1,{m:1}], mm:[1e-3,{m:1}], cm:[1e-2,{m:1}], km:[1e3,{m:1}], um:[1e-6,{m:1}], "µm":[1e-6,{m:1}], "in":[0.0254,{m:1}], ft:[0.3048,{m:1}],
+  kg:[1,{kg:1}], g:[1e-3,{kg:1},1], mg:[1e-6,{kg:1}], tonne:[1e3,{kg:1}], t:[1e3,{kg:1},1], lb:[0.45359237,{kg:1}],
+  s:[1,{s:1}], ms:[1e-3,{s:1}], min:[60,{s:1}], h:[3600,{s:1},1], hr:[3600,{s:1}],
+  N:[1,{N:1}], kN:[1e3,{N:1}], MN:[1e6,{N:1}], mN:[1e-3,{N:1}], lbf:[4.4482216152605,{N:1}],
+  Nm:[1,{N:1,m:1}], Nmm:[1e-3,{N:1,m:1}], kNm:[1e3,{N:1,m:1}],
+  J:[1,{J:1}], kJ:[1e3,{J:1}], MJ:[1e6,{J:1}], Wh:[3600,{J:1}], kWh:[3.6e6,{J:1}],
+  W:[1,{W:1}], kW:[1e3,{W:1}], MW:[1e6,{W:1}], hp:[745.7,{W:1}],
+  Pa:[1,{Pa:1}], kPa:[1e3,{Pa:1}], MPa:[1e6,{Pa:1}], GPa:[1e9,{Pa:1}], bar:[1e5,{Pa:1}], atm:[101325,{Pa:1}], psi:[6894.757,{Pa:1}],
+  rad:[1,{rad:1}], rev:[TAU,{rad:1}], rpm:[TAU/60,{rad:1,s:-1}], rps:[TAU,{rad:1,s:-1}],
+  deg:[1,{"°":1}], "°":[1,{"°":1}],
+  Hz:[1,{Hz:1}], kHz:[1e3,{Hz:1}],
+  mph:[0.44704,{m:1,s:-1}], kph:[1/3.6,{m:1,s:-1}],
+  K:[1,{K:1}], C:[1,{C:1}], A:[1,{A:1}], V:[1,{V:1}], mol:[1,{mol:1}]
+};
+const SUP={"0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹","-":"⁻"};
+function supNum(n){ return n===1 ? "" : String(n).split("").map(c=>SUP[c]||c).join(""); }
+function parseUnit(str){
+  let s=String(str).trim().replace(/²/g,"^2").replace(/³/g,"^3").replace(/⁻¹/g,"^-1");
+  if(!s||s.length>24) return null;
+  const toks=s.split(/(\/)|[·*.\s]+/).filter(x=>x!==undefined&&x!=="");
+  if(!toks.length) return null;
+  let den=false, f=1; const dims=[];
+  const single = toks.filter(x=>x!=="/").length===1 && toks.length===1;
+  for(const tk of toks){
+    if(tk==="/"){ den=true; continue; }
+    if(tk==="1") continue;
+    const m=tk.match(/^([A-Za-zµ°]+)(?:\^\(?(-?\d+)\)?|(\d))?$/);
+    if(!m) return null;
+    const u=UNITS[m[1]]; if(!u) return null;
+    if(u[2] && single) return null;           // bare g / t / h are too ambiguous
+    let e=+(m[2]||m[3]||1); if(den) e=-e;
+    f*=Math.pow(u[0],e);
+    for(const k in u[1]){
+      const d=dims.find(x=>x[0]===k);
+      if(d) d[1]+=u[1][k]*e; else dims.push([k,u[1][k]*e]);
+    }
+  }
+  const num=dims.filter(d=>d[1]>0).map(d=>d[0]+supNum(d[1])).join("·");
+  const dn=dims.filter(d=>d[1]<0).map(d=>d[0]+supNum(-d[1]));
+  let label=num;
+  if(dn.length) label=(num||"1")+"/"+(dn.length>1?"("+dn.join("·")+")":dn[0]);
+  return {f:f, label:label};
+}
+function unitLike(s){ return s.length<=24 && /^[A-Za-zµ°Ω%][^()+=,<>!]*$/.test(s) && !/\s-|-\s/.test(s); }
+function withUnit(v, tail, si){
+  const pu=parseUnit(tail);
+  if(si && pu){
+    const conv=Math.abs(pu.f-1)>1e-12;
+    return {v:v*pu.f, unit:pu.label, from: conv ? tail : ""};
+  }
+  return {v:v, unit:tail};
+}
+/* Read a value that may carry a unit: "50", "u + a*t", "50 m/s", "12kN", "72km/h".
+   Returns {v, unit, from} or {err}. si=true converts known units to SI. */
+function evalSmart(src, vars, si){
   const s=String(src).trim();
   if(!s) return null;
-  try{ return {v:evaluate(s,vars), unit:""}; }catch(e){}
+  // a compound unit glued to a number ("10m/s^2", "72km/h") wins over implicit multiplication
+  for(let k=1;k<s.length;k++){
+    if(/[0-9.)]/.test(s[k-1]) && /[A-Za-zµ°]/.test(s[k])){
+      const tail=s.slice(k);
+      if(/[\/^²³]/.test(tail) && parseUnit(tail)){
+        try{ return withUnit(evaluate(s.slice(0,k),vars), tail, si); }catch(e){}
+      }
+    }
+  }
+  let firstErr=null;
+  try{ return {v:evaluate(s,vars), unit:""}; }catch(e){ firstErr=e; }
+  // value, space, unit: "50 m/s", "u + a*t m/s"
   const parts=s.split(/\s+/);
   for(let cut=parts.length-1; cut>0; cut--){
-    const head=parts.slice(0,cut).join(" ");
-    if(!/[0-9]/.test(head)) break;
-    try{ return {v:evaluate(head,vars), unit:parts.slice(cut).join(" ")}; }catch(e){}
+    const head=parts.slice(0,cut).join(" "), tail=parts.slice(cut).join(" ");
+    if(!unitLike(tail)) continue;
+    if(!/[0-9]/.test(head) && !parseUnit(tail)) continue;
+    try{ return withUnit(evaluate(head,vars), tail, si); }catch(e){}
   }
-  return null;
+  // glued simple unit: "12kN", "1500rpm"
+  const g=s.match(/^(.*[0-9.)])\s*([A-Za-zµ°][A-Za-zµ°0-9^]*)$/);
+  if(g && parseUnit(g[2])){
+    try{ return withUnit(evaluate(g[1],vars), g[2], si); }catch(e){}
+  }
+  return {err: firstErr&&firstErr.calc ? firstErr.message : "can't read this"};
 }
+/* Used by the answer boxes: same reader, no unit conversion. */
+function evalLoose(src, vars){
+  const r=evalSmart(src, vars, false);
+  return r && !r.err ? {v:r.v, unit:r.unit} : null;
+}
+/* One line of the working pad. Returns null for blank/comment lines, else
+   {name, v, unit, from} or {name, err}; assigns into sc when it can. */
+const ASSIGN_RE=/^\s*([A-Za-z_Ͱ-Ͽ][A-Za-z_0-9Ͱ-Ͽ]*)\s*=\s*(.+)$/;
+function padEval(line, sc){
+  const body=String(line).split("#")[0];
+  if(!body.trim()) return null;
+  const m=body.match(ASSIGN_RE);
+  const rhs=m ? m[2] : body.replace(/=\s*$/,"");
+  const r=evalSmart(rhs, sc, siUnits) || {err:"can't read this"};
+  r.name=m?m[1]:null;
+  if(!r.err && m) sc[m[1]]=r.v;
+  return r;
+}
+function padText(r){ return r && !r.err ? fmt(r.v)+(r.unit?" "+r.unit:"") : ""; }
 function fmt(n){
   if(!isFinite(n)) return "—";
   const a=Math.abs(n);
@@ -720,7 +905,19 @@ function fmt(n){
   }
   let s=n.toPrecision(7);
   if(s.indexOf(".")>-1) s=s.replace(/0+$/,"").replace(/\.$/,"");
+  if(s==="-0") s="0";
   return s;
+}
+/* Calculator display: NORM / SCI / ENG, as HTML with ×10ⁿ */
+function fmtMode(n, mode){
+  if(!isFinite(n)) return "—";
+  if(mode==="norm" || n===0) return esc(fmt(n));
+  let e=Math.floor(Math.log10(Math.abs(n)));
+  if(mode==="eng") e=Math.floor(e/3)*3;
+  let m=n/Math.pow(10,e);
+  let ms=(+m.toPrecision(7)).toString();
+  if(Math.abs(+ms)>=(mode==="eng"?1000:10)){ e+=mode==="eng"?3:1; ms=(+(n/Math.pow(10,e)).toPrecision(7)).toString(); }
+  return esc(ms)+(e?'<span class="x10">×10<sup>'+e+'</sup></span>':"");
 }
 
 /* ============================================================
@@ -1145,28 +1342,17 @@ function runPad(){
   for(let pi=0; pi<s.page; pi++) s.pages[pi].n.split("\n").forEach(evalLine);
   let html="";
   lines.forEach(line=>{
-    const body=line.split("#")[0];
-    if(!body.trim()){ html+="<div></div>"; return; }
-    const m=body.match(/^\s*([A-Za-z_][A-Za-z_0-9]*)\s*=\s*(.+)$/);
-    let name=null, rhs;
-    if(m){ name=m[1]; rhs=m[2]; } else { rhs=body.replace(/=\s*$/,""); }
-    const res=evalLoose(rhs, scope);
-    if(!res){ html+='<div class="err"></div>'; return; }
-    if(name) scope[name]=res.v;
-    html+='<div>'+esc(fmt(res.v))+(res.unit?' <span class="u">'+esc(res.unit)+'</span>':'')+'</div>';
+    const res=padEval(line, scope);
+    if(!res){ html+="<div></div>"; return; }
+    if(res.err){ html+='<div class="err" title="'+esc(res.err)+'">&#9888; '+esc(res.err)+'</div>'; return; }
+    const tip=(res.name?res.name+" = ":"")+fmt(res.v)+(res.unit?" "+res.unit:"")+(res.from?"  (converted from "+res.from+")":"");
+    html+='<div title="'+esc(tip)+'">'+esc(fmt(res.v))+(res.unit?' <span class="u">'+esc(res.unit)+'</span>':'')+'</div>';
   });
   padOut.innerHTML=html;
   padInput.style.height=(Math.max(lines.length+2, focusOn?34:22)*30+30)+"px";
   paintVars();
 }
-function evalLine(line){
-  const body=line.split("#")[0];
-  if(!body.trim()) return;
-  const m=body.match(/^\s*([A-Za-z_][A-Za-z_0-9]*)\s*=\s*(.+)$/);
-  if(!m) return;
-  const r=evalLoose(m[2], scope);
-  if(r) scope[m[1]]=r.v;
-}
+function evalLine(line){ padEval(line, scope); }
 padInput.addEventListener("input",()=>{ runPad(); commitPad(); });
 
 let focusOn=false;
@@ -1328,55 +1514,182 @@ window.addEventListener("orientationchange",()=>{ setTimeout(()=>{ if(!document.
    ============================================================ */
 const calcPanel=document.getElementById("calcPanel"), calcIn=document.getElementById("calcIn"),
       calcRes=document.getElementById("calcRes"), calcToggle=document.getElementById("calcToggle");
-let ans=0;
+const focusCalc=()=>{ if(!window.matchMedia||matchMedia("(pointer:fine)").matches) calcIn.focus(); };
+let ans=0, calcShift=false, calcMode="norm", calcHist=[];
+try{ calcMode=localStorage.getItem("mcen-calc-mode")||"norm"; }catch(e){}
+try{ calcHist=JSON.parse(localStorage.getItem("mcen-calc-hist"))||[]; }catch(e){ calcHist=[]; }
+if(calcHist.length) ans=calcHist[calcHist.length-1].v;
+
+/* [insert, label, class, 2nd-insert, 2nd-label, title]
+   insert: text, or a special: "=", "AC", "DEL", "2nd", "INV" (1/x), "NEG" */
 const KEYS=[
-  ["sin(","sin","fn"],["cos(","cos","fn"],["tan(","tan","fn"],["sqrt(","√","fn"],["^","^","op"],
-  ["7","7"],["8","8"],["9","9"],["/","÷","op"],["(","(","op"],
-  ["4","4"],["5","5"],["6","6"],["*","×","op"],[")",")","op"],
-  ["1","1"],["2","2"],["3","3"],["-","−","op"],["pi","π","fn"],
-  ["0","0"],[".","."],["g","g","fn"],["+","+","op"],["=","=","eq"],
-  ["e","e","fn"],["ln(","ln","fn"],["log(","log","fn"],["ans","ans","fn"],["⌫","⌫","del"]
+  ["2nd","2nd","sh"],         ["sin(","sin","fn","asin(","sin⁻¹"], ["cos(","cos","fn","acos(","cos⁻¹"], ["tan(","tan","fn","atan(","tan⁻¹"], ["pi","π","fn","e","e"],
+  ["^2","x²","fn","^3","x³"], ["^","xʸ","fn","root(","ʸ√x","root(x, n)"], ["sqrt(","√","fn","cbrt(","∛"], ["ln(","ln","fn","exp(","eˣ"], ["log(","log","fn","10^","10ˣ"],
+  ["INV","1/x","fn","abs(","|x|"], ["!","n!","fn","nCr(","nCr","nCr(n, r)"], ["(","(","op"], [")",")","op"], ["°","°","fn",",",",","° marks degrees; 2nd gives a comma for 2-input functions"],
+  ["7","7"],["8","8"],["9","9"],["/","÷","op"],["AC","AC","del"],
+  ["4","4"],["5","5"],["6","6"],["*","×","op"],["DEL","⌫","del"],
+  ["1","1"],["2","2"],["3","3"],["-","−","op"],["ans","Ans","fn","NEG","(−)"],
+  ["0","0"],[".","."],["E","×10ˣ","fn","g","g"],["+","+","op"],["=","=","eq"]
 ];
 const keysEl=document.getElementById("keys");
-KEYS.forEach(k=>{
-  const b=document.createElement("button");
-  b.className="key"+(k[2]?" "+k[2]:""); b.textContent=k[1];
-  b.addEventListener("click",()=>{
-    if(k[0]==="="){ pushCalc(); return; }
-    if(k[0]==="⌫"){ calcIn.value=calcIn.value.slice(0,-1); calcLive(); return; }
-    calcIn.value+=k[0]; calcLive(); calcIn.focus();
+function calcInsert(txt){
+  const el=calcIn, a=el.selectionStart==null?el.value.length:el.selectionStart, b=el.selectionEnd==null?a:el.selectionEnd;
+  let v=el.value;
+  // after "=", an operator continues from the answer
+  if(!v.trim() && /^[\^!+*\/%]/.test(txt) ) { v="ans"; el.value=v; return calcInsert(txt); }
+  el.value=v.slice(0,a)+txt+v.slice(b);
+  const pos=a+txt.length; el.setSelectionRange(pos,pos);
+  calcLive();
+}
+function paintKeys(){
+  keysEl.innerHTML="";
+  KEYS.forEach(k=>{
+    const b=document.createElement("button");
+    const alt = calcShift && k[3]!==undefined;
+    b.type="button";
+    b.className="key"+(k[2]?" "+k[2]:"")+(alt?" alt":"")+(k[0]==="2nd"&&calcShift?" on":"");
+    b.textContent = alt ? k[4] : k[1];
+    if(k[5]) b.title=k[5];
+    b.addEventListener("mousedown",e=>e.preventDefault()); // keep the caret in the input
+    b.addEventListener("click",()=>{
+      const ins = alt ? k[3] : k[0];
+      if(ins==="2nd"){ calcShift=!calcShift; paintKeys(); return; }
+      if(calcShift){ calcShift=false; paintKeys(); }
+      if(ins==="="){ pushCalc(); return; }
+      if(ins==="AC"){ calcIn.value=""; calcLive(); return; }
+      if(ins==="DEL"){
+        const a=calcIn.selectionStart, bb=calcIn.selectionEnd, v=calcIn.value;
+        if(a!==bb){ calcIn.value=v.slice(0,a)+v.slice(bb); calcIn.setSelectionRange(a,a); }
+        else if(a>0){ calcIn.value=v.slice(0,a-1)+v.slice(a); calcIn.setSelectionRange(a-1,a-1); }
+        calcLive(); return;
+      }
+      if(ins==="INV"){ const v=calcIn.value.trim(); calcIn.value= v ? "1/("+v+")" : "1/ans"; calcLive(); return; }
+      if(ins==="NEG"){ calcInsert("-"); return; }
+      calcInsert(ins);
+    });
+    keysEl.appendChild(b);
   });
-  keysEl.appendChild(b);
-});
+}
+paintKeys();
+
+function calcScope(){ return Object.assign(Object.create(null), scope, {ans:ans}); }
 function calcLive(){
   const v=calcIn.value.trim();
-  if(!v){ calcRes.textContent=""; calcRes.classList.remove("err"); return; }
-  const r=evalLoose(v, Object.assign({ans:ans}, scope));
-  if(r){ calcRes.textContent=fmt(r.v)+(r.unit?" "+r.unit:""); calcRes.classList.remove("err"); }
-  else { calcRes.textContent="keep typing…"; calcRes.classList.add("err"); }
+  if(!v){ calcRes.innerHTML='<span class="calc-ph">'+(calcHist.length?"Ans = "+fmtMode(ans,calcMode):"")+'</span>'; calcRes.classList.remove("err"); return; }
+  const r=evalSmart(v, calcScope(), siUnits);
+  if(r && !r.err){
+    calcRes.innerHTML="= "+fmtMode(r.v,calcMode)+(r.unit?' <span class="u">'+esc(r.unit)+'</span>':'');
+    calcRes.classList.remove("err");
+  } else {
+    calcRes.textContent = r && r.err ? r.err : "keep typing…";
+    calcRes.classList.add("err");
+  }
+}
+function paintHist(){
+  const el=document.getElementById("calcHist");
+  if(!calcHist.length){ el.innerHTML='<div class="calc-hint">Type or tap an expression, press <b>=</b> or Enter. ↑ recalls the last one.</div>'; return; }
+  el.innerHTML=calcHist.slice(-8).map((h,i,arr)=>{
+    const idx=calcHist.length-arr.length+i;
+    return '<button type="button" class="hrow" data-h="'+idx+'" title="Click to reuse this expression">'+
+      '<span class="hx">'+esc(h.x)+'</span><span class="hv">'+fmtMode(h.v,calcMode)+(h.u?' <span class="u">'+esc(h.u)+'</span>':'')+'</span></button>';
+  }).join("");
+  el.querySelectorAll("[data-h]").forEach(b=>b.addEventListener("click",()=>{
+    calcIn.value=calcHist[+b.dataset.h].x; calcLive(); focusCalc();
+  }));
+  el.scrollTop=el.scrollHeight;
 }
 function pushCalc(){
-  const r=evalLoose(calcIn.value, Object.assign({ans:ans}, scope));
-  if(r){ ans=r.v; calcIn.value=fmt(r.v); calcLive(); }
+  const x=calcIn.value.trim(); if(!x) return;
+  const r=evalSmart(x, calcScope(), siUnits);
+  if(!r || r.err){ calcLive(); calcIn.classList.remove("shake"); void calcIn.offsetWidth; calcIn.classList.add("shake"); return; }
+  ans=r.v;
+  calcHist.push({x:x, v:r.v, u:r.unit||""});
+  if(calcHist.length>40) calcHist=calcHist.slice(-40);
+  try{ localStorage.setItem("mcen-calc-hist", JSON.stringify(calcHist)); }catch(e){}
+  calcIn.value=""; histPos=-1;
+  paintHist(); calcLive(); focusCalc();
 }
+let histPos=-1;
 calcIn.addEventListener("input",calcLive);
-calcIn.addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();pushCalc();} });
-document.getElementById("angleMode").addEventListener("click",e=>{
-  angleDeg=!angleDeg; e.target.textContent=angleDeg?"DEG":"RAD"; calcLive(); runPad();
+calcIn.addEventListener("keydown",e=>{
+  if(e.key==="Enter"){ e.preventDefault(); pushCalc(); }
+  else if(e.key==="Escape"){ e.preventDefault(); if(calcIn.value) { calcIn.value=""; calcLive(); } else openCalc(false); e.stopPropagation(); }
+  else if(e.key==="ArrowUp"&&calcHist.length){
+    e.preventDefault(); histPos = histPos<0 ? calcHist.length-1 : Math.max(0,histPos-1);
+    calcIn.value=calcHist[histPos].x; calcLive();
+  }
+  else if(e.key==="ArrowDown"&&histPos>=0){
+    e.preventDefault(); histPos++;
+    if(histPos>=calcHist.length){ histPos=-1; calcIn.value=""; } else calcIn.value=calcHist[histPos].x;
+    calcLive();
+  }
 });
+function syncAngleButtons(){
+  document.querySelectorAll("[data-angle-btn]").forEach(b=>{ b.textContent=angleDeg?"DEG":"RAD"; b.title=angleDeg?"Angles in degrees — click for radians":"Angles in radians — click for degrees"; });
+}
+function toggleAngle(){
+  angleDeg=!angleDeg;
+  try{ localStorage.setItem("mcen-angle", angleDeg?"deg":"rad"); }catch(e){}
+  syncAngleButtons(); calcLive(); runPad();
+}
+document.querySelectorAll("[data-angle-btn]").forEach(b=>b.addEventListener("click",toggleAngle));
+syncAngleButtons();
+const fmtBtn=document.getElementById("fmtMode");
+function syncFmt(){ fmtBtn.textContent=calcMode.toUpperCase(); fmtBtn.title="Answer format: "+({norm:"normal",sci:"scientific",eng:"engineering (powers of 3)"})[calcMode]+" — click to change"; }
+fmtBtn.addEventListener("click",()=>{
+  calcMode = calcMode==="norm"?"sci":calcMode==="sci"?"eng":"norm";
+  try{ localStorage.setItem("mcen-calc-mode",calcMode); }catch(e){}
+  syncFmt(); calcLive(); paintHist();
+});
+syncFmt();
+document.getElementById("calcClearHist").addEventListener("click",()=>{
+  calcHist=[]; ans=0; try{ localStorage.removeItem("mcen-calc-hist"); }catch(e){}
+  paintHist(); calcLive();
+});
+document.getElementById("calcToPad").addEventListener("click",()=>{
+  const v=calcIn.value.trim();
+  const r = v ? evalSmart(v, calcScope(), siUnits) : {v:ans, unit:""};
+  if(!r || r.err) return;
+  if(document.getElementById("padType").hidden) selectTab("type");
+  const el=padInput, a=el.selectionStart==null?el.value.length:el.selectionStart;
+  const txt=fmt(r.v)+(r.unit?" "+r.unit:"");
+  const before=el.value.slice(0,a), after=el.value.slice(a);
+  el.value=before+txt+after;
+  el.focus(); el.setSelectionRange(a+txt.length, a+txt.length);
+  runPad(); commitPad();
+});
+
+/* calculator tabs: keys / constants / conversions */
+document.querySelectorAll("#calcTabs [data-ctab]").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("#calcTabs [data-ctab]").forEach(x=>x.setAttribute("aria-selected", x===b?"true":"false"));
+  ["keys","calcConsts","convRow"].forEach(id=>{ document.getElementById(id).hidden = id!==b.dataset.ctab; });
+}));
+document.getElementById("calcConsts").innerHTML=CONST_INFO.map(c=>
+  '<button type="button" class="constb" data-c="'+c[0]+'" title="'+esc(c[3])+' — inserts '+esc(c[0])+'"><b>'+esc(c[1])+'</b><span>'+esc(c[2])+'</span><i>'+esc(c[3])+'</i></button>'
+).join("");
+document.querySelectorAll("#calcConsts [data-c]").forEach(b=>{
+  b.addEventListener("mousedown",e=>e.preventDefault());
+  b.addEventListener("click",()=>calcInsert(b.dataset.c));
+});
+
 function openCalc(open){
   calcPanel.hidden=!open;
   calcToggle.setAttribute("aria-pressed",open?"true":"false");
   calcToggle.classList.toggle("active",open);
-  if(open) calcIn.focus();
+  const pb=document.getElementById("padCalcBtn"); if(pb) pb.classList.toggle("on",open);
+  if(open){ paintHist(); calcLive(); focusCalc(); }
 }
 calcToggle.addEventListener("click",()=>openCalc(calcPanel.hidden));
 document.getElementById("calcClose").addEventListener("click",()=>openCalc(false));
 function paintVars(){
   const el=document.getElementById("calcVars"), names=Object.keys(scope);
   el.innerHTML = names.length
-    ? names.map(n=>'<span class="var-chip"><b>'+esc(n)+'</b> '+esc(fmt(scope[n]))+'</span>').join("")
-    : '<span class="var-chip">Define values in the working pad and use them here</span>';
+    ? '<span class="vlab">Your values</span>'+names.map(n=>'<button type="button" class="var-chip" data-v="'+esc(n)+'" title="Insert '+esc(n)+'"><b>'+esc(n)+'</b> '+esc(fmt(scope[n]))+'</button>').join("")
+    : '<span class="var-chip plain">Define values in the working pad (e.g. <b>u = 50</b>) and use them here by name</span>';
+  el.querySelectorAll("[data-v]").forEach(b=>{
+    b.addEventListener("mousedown",e=>e.preventDefault());
+    b.addEventListener("click",()=>{ if(!calcPanel.hidden) calcInsert(b.dataset.v); });
+  });
 }
 const fsPanel=document.getElementById("fsPanel"), fsToggle=document.getElementById("fsToggle");
 if(fsToggle && fsPanel){
@@ -1744,11 +2057,7 @@ function buildExport(all){
         txt.split("\n").forEach(line=>{
           const body=line.split("#")[0];
           let out="";
-          if(body.trim()){
-            const m=body.match(/^\s*([A-Za-z_][A-Za-z_0-9]*)\s*=\s*(.+)$/);
-            const r=evalLoose(m?m[2]:body.replace(/=\s*$/,""), sc);
-            if(r){ if(m) sc[m[1]]=r.v; out=fmt(r.v)+(r.unit?" "+r.unit:""); }
-          }
+          if(body.trim()) out=padText(padEval(line, sc));
           h+='<tr><td class="m">'+esc(line||" ")+'</td><td class="m res">'+esc(out)+'</td></tr>';
         });
         h+='</table>';
@@ -1760,12 +2069,7 @@ function buildExport(all){
   });
   return h;
 }
-function evalLineIn(sc){ return line=>{
-  const body=line.split("#")[0];
-  const m=body.match(/^\s*([A-Za-z_][A-Za-z_0-9]*)\s*=\s*(.+)$/);
-  if(!m) return;
-  const r=evalLoose(m[2],sc); if(r) sc[m[1]]=r.v;
-};}
+function evalLineIn(sc){ return line=>{ padEval(line, sc); };}
 
 const exPanel=document.getElementById("exPanel");
 let exAll=false;
@@ -1842,11 +2146,7 @@ function buildDocxBytes(all){
         if(txt.trim()) txt.split("\n").forEach(line=>{
           const body=line.split("#")[0];
           let out="";
-          if(body.trim()){
-            const m=body.match(/^\s*([A-Za-z_][A-Za-z_0-9]*)\s*=\s*(.+)$/);
-            const r=evalLoose(m?m[2]:body.replace(/=\s*$/,""), sc);
-            if(r){ if(m) sc[m[1]]=r.v; out=fmt(r.v)+(r.unit?" "+r.unit:""); }
-          }
+          if(body.trim()) out=padText(padEval(line, sc));
           const rs=[run(line||" ",{font:MONO,sz:18})];
           if(out) rs.push(run("        \u2192 "+out,{font:MONO,sz:18,color:"0F5F7D"}));
           api.p(rs,{after:0,line:220});
@@ -1898,12 +2198,44 @@ document.getElementById("exWord").addEventListener("click",async ()=>{
    PROGRESS SUMMARY + CALCULATOR CONVERSIONS
    ============================================================ */
 document.getElementById("convRow").querySelectorAll("[data-ins]").forEach(b=>{
+  b.addEventListener("mousedown",e=>e.preventDefault());
   b.addEventListener("click",()=>{
     const v=calcIn.value.trim();
     calcIn.value = v ? "("+v+")"+b.dataset.ins : "ans"+b.dataset.ins;
-    calcLive(); calcIn.focus();
+    calcLive(); focusCalc();
   });
 });
+
+/* working-pad toolbar: units, calculator, help */
+(function(){
+  const si=document.getElementById("siBtn"), help=document.getElementById("padHelpBtn"), helpBox=document.getElementById("padHelp");
+  function syncSi(){ si.setAttribute("aria-pressed", siUnits?"true":"false"); si.textContent = siUnits ? "Units \u2192 SI: on" : "Units \u2192 SI: off"; }
+  si.addEventListener("click",()=>{ siUnits=!siUnits; try{ localStorage.setItem("mcen-si", siUnits?"1":"0"); }catch(e){} syncSi(); runPad(); calcLive(); });
+  syncSi();
+  document.getElementById("padCalcBtn").addEventListener("click",()=>openCalc(calcPanel.hidden));
+  help.addEventListener("click",()=>{ helpBox.hidden=!helpBox.hidden; help.setAttribute("aria-expanded", helpBox.hidden?"false":"true"); });
+  helpBox.querySelectorAll("code[data-try]").forEach(c=>c.addEventListener("click",()=>{
+    const v=padInput.value; padInput.value = v + (v && !v.endsWith("\n") ? "\n" : "") + c.dataset.try;
+    runPad(); commitPad(); padInput.focus();
+  }));
+})();
+
+/* drag the calculator by its title bar (mouse / pen; on phones it stays docked) */
+(function(){
+  const head=calcPanel.querySelector(".calc-head"); let sx=0, sy=0, ox=0, oy=0, drag=false;
+  head.addEventListener("pointerdown",e=>{
+    if(e.target.closest("button") || window.innerWidth<700) return;
+    const r=calcPanel.getBoundingClientRect(); drag=true; sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
+    head.setPointerCapture(e.pointerId);
+  });
+  head.addEventListener("pointermove",e=>{
+    if(!drag) return;
+    const w=calcPanel.offsetWidth, h=calcPanel.offsetHeight;
+    const x=Math.min(Math.max(0, ox+e.clientX-sx), window.innerWidth-w), y=Math.min(Math.max(0, oy+e.clientY-sy), window.innerHeight-Math.min(h,60));
+    calcPanel.style.left=x+"px"; calcPanel.style.top=y+"px"; calcPanel.style.right="auto"; calcPanel.style.bottom="auto";
+  });
+  head.addEventListener("pointerup",()=>{ drag=false; });
+})();
 
 const sumPanel=document.getElementById("sumPanel"), sumBtn=document.getElementById("sumBtn");
 function paintSummary(){

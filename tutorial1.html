@@ -328,6 +328,36 @@ img{max-width:100%}
         <span class="pad-note" id="padNote">write anywhere &mdash; finger or pencil</span>
       </div>
       <div class="pad-body" id="padType" role="tabpanel" aria-labelledby="tabType" hidden>
+        <div class="draw-tools pad-tools">
+          <span class="label">Pad</span>
+          <button class="pen-size" type="button" data-angle-btn>DEG</button>
+          <button class="pen-size" type="button" id="siBtn" aria-pressed="true" title="Values typed with units (km/h, kN, rpm, mm…) are converted to SI">Units &rarr; SI: on</button>
+          <button class="pen-size" type="button" id="padCalcBtn">&#128425; Calculator</button>
+          <button class="pen-size" type="button" id="padHelpBtn" aria-expanded="false">? How to type</button>
+        </div>
+        <div class="pad-help" id="padHelp" hidden>
+          <div class="ph-col">
+            <h5>Lines</h5>
+            <p><code data-try="u = 50">u = 50</code> stores a value. Use it on later lines (and in the calculator).</p>
+            <p><code data-try="v = u + a*t">v = u + a*t</code> the answer shows on the right.</p>
+            <p><code># note</code> anything after # is ignored.</p>
+          </div>
+          <div class="ph-col">
+            <h5>Maths</h5>
+            <p><code>+ − × ÷ ^</code> &nbsp; <code>2pi</code> <code>3(a+b)</code> <code>5!</code> <code>x²</code></p>
+            <p><code>sin cos tan asin acos atan atan2(y,x)</code></p>
+            <p><code>sqrt cbrt root(x,n) ln log log(x,b) exp abs</code></p>
+            <p><code>sinh cosh tanh hypot(a,b) nCr(n,r) round(x,2)</code></p>
+            <p><code>30°</code> always means degrees. A missing <code>)</code> is added for you.</p>
+          </div>
+          <div class="ph-col">
+            <h5>Units &amp; constants</h5>
+            <p><code data-try="v0 = 72 km/h">v0 = 72 km/h</code> &rarr; 20 m/s</p>
+            <p><code data-try="w = 1500 rpm">w = 1500 rpm</code> &rarr; 157.08 rad/s</p>
+            <p><code data-try="F = 3 kN">F = 3 kN</code> &rarr; 3000 N &nbsp; <code>mm cm km min hr kW hp kPa MPa bar rev</code></p>
+            <p><code>g</code> 9.81 &nbsp; <code>pi</code> &nbsp; <code>e</code> &nbsp; <code>G c0 hP kB NA Rgas qe me</code> (see calculator &rarr; Constants)</p>
+          </div>
+        </div>
         <div class="pad-grid">
           <textarea class="pad-input" id="padInput" spellcheck="false" wrap="off"
             placeholder="Write your steps here, one per line.&#10;&#10;u = 50&#10;a = -10&#10;v = u + a * 4&#10;&#10;Anything after # is a note."></textarea>
@@ -379,24 +409,44 @@ img{max-width:100%}
 
 <div id="exportDoc" aria-hidden="true"></div>
 
-<aside class="calc" id="calcPanel" hidden aria-label="Calculator">
-  <div class="calc-head">
-    <span class="label">Calculator</span>
-    <button class="mode-btn" id="angleMode">DEG</button>
-    <button class="x-btn" id="calcClose" aria-label="Close calculator">&times;</button>
+<aside class="calc" id="calcPanel" hidden aria-label="Scientific calculator">
+  <div class="calc-head" title="Drag to move">
+    <span class="label">Scientific calculator</span>
+    <button class="mode-btn" id="angleMode" data-angle-btn type="button">DEG</button>
+    <button class="mode-btn" id="fmtMode" type="button">NORM</button>
+    <button class="x-btn" id="calcClose" type="button" aria-label="Close calculator">&times;</button>
   </div>
+  <div class="calc-hist" id="calcHist" aria-label="History"></div>
   <div class="calc-screen">
-    <input class="calc-in" id="calcIn" placeholder="0" spellcheck="false" autocomplete="off">
-    <div class="calc-res" id="calcRes"></div>
+    <input class="calc-in" id="calcIn" placeholder="e.g. sqrt(20^2 + 15^2)" spellcheck="false" autocomplete="off" autocapitalize="off" inputmode="text">
+    <div class="calc-res" id="calcRes" aria-live="polite"></div>
+    <div class="calc-actions">
+      <button type="button" id="calcToPad" title="Put this result into the working pad at the cursor">&rarr; Pad</button>
+      <button type="button" id="calcClearHist">Clear history</button>
+    </div>
+  </div>
+  <div class="calc-tabs" id="calcTabs" role="tablist">
+    <button type="button" role="tab" data-ctab="keys" aria-selected="true">Keys</button>
+    <button type="button" role="tab" data-ctab="calcConsts" aria-selected="false">Constants</button>
+    <button type="button" role="tab" data-ctab="convRow" aria-selected="false">Convert</button>
   </div>
   <div class="keys" id="keys"></div>
-  <div class="conv" id="convRow">
-    <button class="convb" data-ins="/3.6" title="km/h to m/s">km/h&rarr;m/s</button>
-    <button class="convb" data-ins="*3.6" title="m/s to km/h">m/s&rarr;km/h</button>
-    <button class="convb" data-ins="*2*pi/60" title="rpm to rad/s">rpm&rarr;rad/s</button>
-    <button class="convb" data-ins="*60/(2*pi)" title="rad/s to rpm">rad/s&rarr;rpm</button>
-    <button class="convb" data-ins="/(2*pi)" title="radians to revolutions">rad&rarr;rev</button>
-    <button class="convb" data-ins="/1000" title="mm to m">mm&rarr;m</button>
+  <div class="consts" id="calcConsts" hidden></div>
+  <div class="conv" id="convRow" hidden>
+    <button type="button" class="convb" data-ins="/3.6" title="km/h to m/s">km/h&rarr;m/s</button>
+    <button type="button" class="convb" data-ins="*3.6" title="m/s to km/h">m/s&rarr;km/h</button>
+    <button type="button" class="convb" data-ins="*2*pi/60" title="rpm to rad/s">rpm&rarr;rad/s</button>
+    <button type="button" class="convb" data-ins="*60/(2*pi)" title="rad/s to rpm">rad/s&rarr;rpm</button>
+    <button type="button" class="convb" data-ins="*pi/180" title="degrees to radians">deg&rarr;rad</button>
+    <button type="button" class="convb" data-ins="*180/pi" title="radians to degrees">rad&rarr;deg</button>
+    <button type="button" class="convb" data-ins="*2*pi" title="revolutions to radians">rev&rarr;rad</button>
+    <button type="button" class="convb" data-ins="/(2*pi)" title="radians to revolutions">rad&rarr;rev</button>
+    <button type="button" class="convb" data-ins="/1000" title="mm to m (or N to kN)">mm&rarr;m</button>
+    <button type="button" class="convb" data-ins="*1000" title="m to mm (or kN to N)">m&rarr;mm</button>
+    <button type="button" class="convb" data-ins="*745.7" title="horsepower to watts">hp&rarr;W</button>
+    <button type="button" class="convb" data-ins="*1e5" title="bar to pascals">bar&rarr;Pa</button>
+    <button type="button" class="convb" data-ins="/9.81" title="newtons to kilograms (weight)">N&rarr;kg (÷g)</button>
+    <button type="button" class="convb" data-ins="*9.81" title="kilograms to newtons (weight)">kg&rarr;N (×g)</button>
   </div>
   <div class="calc-vars" id="calcVars"></div>
 </aside>
